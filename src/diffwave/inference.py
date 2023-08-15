@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-from diffwave.dataset import get_random_sinusoid_config
 import numpy as np
 import os
 import torch

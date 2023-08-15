@@ -99,15 +99,12 @@ class DiffWaveLearner:
     except FileNotFoundError:
       return False
 
-  def train(self, max_steps=None):
+  def train(self):
     device = next(self.model.parameters()).device
-    while True:
-      epoch = self.step // len(self.dataset)
+    for n_epoch in range(self.params.n_epochs):
       progress_bar = tqdm(total=len(self.dataset))
-      progress_bar.set_description(f'Epoch: {epoch}')
+      progress_bar.set_description(f'Epoch: {n_epoch}')
       for features in self.dataset:
-        if max_steps is not None and self.step >= max_steps:
-          return
         features = _nested_map(features, lambda x: x.to(device) if isinstance(x, torch.Tensor) else x)
         loss = self.train_step(features)
         if torch.isnan(loss).any():
@@ -120,9 +117,9 @@ class DiffWaveLearner:
         self.step += 1
         progress_bar.update(1)
         progress_bar.set_postfix(loss=loss.item())
-      if epoch % self.params.n_viz_epochs == 0:
+      if n_epoch % self.params.n_viz_epochs == 0:
         _log_output_viz(self.model, self.params.n_viz_samples, self.params.audio_len,
-                        epoch, self.model_dir)
+                        n_epoch, self.model_dir)
 
   def train_step(self, features):
     for param in self.model.parameters():
@@ -170,7 +167,7 @@ def _train_impl(replica_id, model, dataset, args, params):
   learner = DiffWaveLearner(args.model_dir, model, dataset, opt, params, fp16=args.fp16)
   learner.is_master = (replica_id == 0)
   learner.restore_from_checkpoint()
-  learner.train(max_steps=args.max_steps)
+  learner.train()
 
 
 def train(args, params):
