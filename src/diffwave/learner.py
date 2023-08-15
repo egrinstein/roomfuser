@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import torch
@@ -22,9 +23,9 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from diffwave.dataset import from_path, from_gtzan
+from diffwave.dataset import from_path, from_gtzan, get_random_sinusoid_config
 from diffwave.model import DiffWave
-from diffwave.params import AttrDict
+from diffwave.inference import predict_batch
 
 
 def _nested_map(struct, map_fn):
@@ -101,7 +102,10 @@ class DiffWaveLearner:
   def train(self, max_steps=None):
     device = next(self.model.parameters()).device
     while True:
-      for features in tqdm(self.dataset, desc=f'Epoch {self.step // len(self.dataset)}') if self.is_master else self.dataset:
+      epoch = self.step // len(self.dataset)
+      progress_bar = tqdm(total=len(self.dataset))
+      progress_bar.set_description(f'Epoch: {epoch}')
+      for features in self.dataset:
         if max_steps is not None and self.step >= max_steps:
           return
         features = _nested_map(features, lambda x: x.to(device) if isinstance(x, torch.Tensor) else x)
@@ -114,13 +118,18 @@ class DiffWaveLearner:
           if self.step % len(self.dataset) == 0:
             self.save_to_checkpoint()
         self.step += 1
+        progress_bar.update(1)
+        progress_bar.set_postfix(loss=loss.item())
+      if epoch % self.params.n_viz_epochs == 0:
+        _log_output_viz(self.model, self.params.n_viz_samples, self.params.audio_len,
+                        epoch, self.model_dir)
 
   def train_step(self, features):
     for param in self.model.parameters():
       param.grad = None
 
     audio = features['audio']
-    spectrogram = features['spectrogram']
+    spectrogram = features['conditioner']
 
     N, T = audio.shape
     device = audio.device
@@ -146,8 +155,8 @@ class DiffWaveLearner:
   def _write_summary(self, step, features, loss):
     writer = self.summary_writer or SummaryWriter(self.model_dir, purge_step=step)
     writer.add_audio('feature/audio', features['audio'][0], step, sample_rate=self.params.sample_rate)
-    if not self.params.unconditional:
-      writer.add_image('feature/spectrogram', torch.flip(features['spectrogram'][:1], [1]), step)
+    # if not self.params.unconditional:
+    #   writer.add_image('feature/spectrogram', torch.flip(features['conditioner'][:1], [1]), step)
     writer.add_scalar('train/loss', loss, step)
     writer.add_scalar('train/grad_norm', self.grad_norm, step)
     writer.flush()
@@ -169,7 +178,16 @@ def train(args, params):
     dataset = from_gtzan(params)
   else:
     dataset = from_path(args.data_dirs, params)
-  model = DiffWave(params).cuda()
+  model = DiffWave(params)
+
+  device = torch.device('cpu')
+  if torch.cuda.is_available():
+    device = torch.device('cuda')
+  elif torch.backends.mps.is_available():
+    device = torch.device('mps')
+  model = model.to(device)
+  model.device = device
+
   _train_impl(0, model, dataset, args, params)
 
 
@@ -186,3 +204,22 @@ def train_distributed(replica_id, replica_count, port, args, params):
   model = DiffWave(params).to(device)
   model = DistributedDataParallel(model, device_ids=[replica_id])
   _train_impl(replica_id, model, dataset, args, params)
+
+
+def _log_output_viz(model, n_viz_samples, n_sample, epoch, outputs_dir):
+  fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1,
+                        figsize=(5, 15))
+  
+  conditioner = torch.stack(
+      [get_random_sinusoid_config(cat=True) for _ in range(n_viz_samples)]
+  ).to(model.device)
+  
+  outputs = predict_batch(model, True, conditioner, model.device, n_sample, n_viz_samples)[0]
+  
+  for i in range(n_viz_samples):
+      axs[i].plot(outputs[i].cpu().detach().numpy())
+
+  # Save the images
+  os.makedirs(outputs_dir, exist_ok=True)
+  plt.tight_layout()
+  plt.savefig(f"{outputs_dir}/{epoch:04d}.png")

@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
+from diffwave.dataset import get_random_sinusoid_config
 import numpy as np
 import os
 import torch
@@ -26,20 +27,8 @@ from diffwave.model import DiffWave
 
 models = {}
 
-def predict(spectrogram=None, model_dir=None, params=None, device=torch.device('cuda'), fast_sampling=False):
-  # Lazy load model.
-  if not model_dir in models:
-    if os.path.exists(f'{model_dir}/weights.pt'):
-      checkpoint = torch.load(f'{model_dir}/weights.pt')
-    else:
-      checkpoint = torch.load(model_dir)
-    model = DiffWave(AttrDict(base_params)).to(device)
-    model.load_state_dict(checkpoint['model'])
-    model.eval()
-    models[model_dir] = model
 
-  model = models[model_dir]
-  model.params.override(params)
+def predict_batch(model, fast_sampling, conditioner, device, audio_len, n_samples=1):
   with torch.no_grad():
     # Change in notation from the DiffWave paper for fast sampling.
     # DiffWave paper -> Implementation below
@@ -69,18 +58,19 @@ def predict(spectrogram=None, model_dir=None, params=None, device=torch.device('
 
 
     if not model.params.unconditional:
-      if len(spectrogram.shape) == 2:# Expand rank 2 tensors by adding a batch dimension.
-        spectrogram = spectrogram.unsqueeze(0)
-      spectrogram = spectrogram.to(device)
-      audio = torch.randn(spectrogram.shape[0], model.params.hop_samples * spectrogram.shape[-1], device=device)
+      # if len(conditioner.shape) == 2:# Expand rank 2 tensors by adding a batch dimension.
+      #   conditioner = conditioner.unsqueeze(0)
+      # audio = torch.randn(conditioner.shape[0], model.params.hop_samples * conditioner.shape[-1], device=device)
+      audio = torch.randn(n_samples, audio_len, device=device)
+      conditioner = conditioner.to(device)
     else:
-      audio = torch.randn(1, params.audio_len, device=device)
-    noise_scale = torch.from_numpy(alpha_cum**0.5).float().unsqueeze(1).to(device)
+      audio = torch.randn(n_samples, audio_len, device=device)
+      conditioner = None
 
     for n in range(len(alpha) - 1, -1, -1):
       c1 = 1 / alpha[n]**0.5
       c2 = beta[n] / (1 - alpha_cum[n])**0.5
-      audio = c1 * (audio - c2 * model(audio, torch.tensor([T[n]], device=audio.device), spectrogram).squeeze(1))
+      audio = c1 * (audio - c2 * model(audio, torch.tensor([T[n]], device=audio.device), conditioner).squeeze(1))
       if n > 0:
         noise = torch.randn_like(audio)
         sigma = ((1.0 - alpha_cum[n-1]) / (1.0 - alpha_cum[n]) * beta[n])**0.5
@@ -88,6 +78,24 @@ def predict(spectrogram=None, model_dir=None, params=None, device=torch.device('
       audio = torch.clamp(audio, -1.0, 1.0)
   return audio, model.params.sample_rate
 
+
+def predict(spectrogram=None, model_dir=None, params=None, device=torch.device('cuda'), fast_sampling=False):
+  # Lazy load model.
+  if not model_dir in models:
+    if os.path.exists(f'{model_dir}/weights.pt'):
+      checkpoint = torch.load(f'{model_dir}/weights.pt')
+    else:
+      checkpoint = torch.load(model_dir)
+    model = DiffWave(AttrDict(base_params)).to(device)
+    model.load_state_dict(checkpoint['model'])
+    model.eval()
+    models[model_dir] = model
+
+  model = models[model_dir]
+  model.params.override(params)
+
+  return predict_batch(model, fast_sampling, spectrogram, device, params.audio_len)
+  
 
 def main(args):
   if args.spectrogram_path:
