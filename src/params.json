@@ -1,6 +1,6 @@
 {
-    "batch_size": 16,
-    "n_epochs": 150,
+    "batch_size": 64,
+    "n_epochs": 200,
     "learning_rate": 2e-4,
     "max_grad_norm": null,
     "sample_rate": 16000,
@@ -23,7 +23,7 @@
         0.5
     ],
     "audio_len": 4000,
-    "n_samples_per_epoch": 1000,
+    "n_samples_per_epoch": 10000,
     "n_viz_epochs": 1,
     "n_viz_samples": 10,
     "n_conditioner": 3,
