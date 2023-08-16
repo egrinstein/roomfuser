@@ -1,6 +1,7 @@
 {
     "batch_size": 64,
     "n_epochs": 200,
+    "n_workers": null,
     "learning_rate": 2e-4,
     "max_grad_norm": null,
     "sample_rate": 16000,
@@ -12,7 +13,7 @@
     "residual_channels": 64,
     "dilation_cycle_length": 10,
     "unconditional": true,
-    "dataset_name": "sinusoid",
+    "dataset_name": "rir",
 
     "inference_noise_schedule": [
         0.0001,
