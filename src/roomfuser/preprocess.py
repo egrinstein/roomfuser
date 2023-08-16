@@ -23,7 +23,7 @@ from concurrent.futures import ProcessPoolExecutor
 from glob import glob
 from tqdm import tqdm
 
-from diffwave.params import params
+from roomfuser.params import params
 
 
 def transform(filename):

@@ -20,8 +20,8 @@ import torchaudio
 
 from argparse import ArgumentParser
 
-from diffwave.params import AttrDict, params as base_params
-from diffwave.model import DiffWave
+from roomfuser.params import AttrDict, params as base_params
+from roomfuser.model import DiffWave
 
 
 models = {}

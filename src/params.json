@@ -11,8 +11,8 @@
     "residual_layers": 30,
     "residual_channels": 64,
     "dilation_cycle_length": 10,
-    "unconditional": false,
-    "random_sinusoid_dataset": true,
+    "unconditional": true,
+    "dataset_name": "sinusoid",
 
     "inference_noise_schedule": [
         0.0001,
@@ -26,7 +26,7 @@
     "n_samples_per_epoch": 10000,
     "n_viz_epochs": 1,
     "n_viz_samples": 10,
-    "n_conditioner": 3,
+    "n_conditioner": 16,
     "noise_schedule": [
         0.0001,
         0.0011183673469387756,

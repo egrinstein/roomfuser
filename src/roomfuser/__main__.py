@@ -17,8 +17,8 @@ from argparse import ArgumentParser
 from torch.cuda import device_count
 from torch.multiprocessing import spawn
 
-from diffwave.learner import train, train_distributed
-from diffwave.params import params
+from roomfuser.learner import train, train_distributed
+from roomfuser.params import params
 
 
 def _get_free_port():
