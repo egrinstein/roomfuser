@@ -23,7 +23,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from roomfuser.dataset import from_path, from_gtzan
+from roomfuser.dataset import from_path
 from roomfuser.dataset.random_sinusoid_dataset import get_random_sinusoid_config
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
@@ -197,10 +197,7 @@ def _train_impl(replica_id, model, dataset, args, params):
 
 
 def train(args, params):
-    if args.data_dirs[0] == "gtzan":
-        dataset = from_gtzan(params)
-    else:
-        dataset = from_path(args.data_dirs, params)
+    dataset = from_path(args.data_dirs, params)
     model = DiffWave(params)
 
     device = torch.device("cpu")
@@ -220,10 +217,8 @@ def train_distributed(replica_id, replica_count, port, args, params):
     torch.distributed.init_process_group(
         "nccl", rank=replica_id, world_size=replica_count
     )
-    if args.data_dirs[0] == "gtzan":
-        dataset = from_gtzan(params, is_distributed=True)
-    else:
-        dataset = from_path(args.data_dirs, params, is_distributed=True)
+
+    dataset = from_path(args.data_dirs, params, is_distributed=True)
     device = torch.device("cuda", replica_id)
     torch.cuda.set_device(device)
     model = DiffWave(params).to(device)
