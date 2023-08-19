@@ -3,12 +3,13 @@ import torch
 
 from torch.utils.data import Dataset
 
+import pyroomacoustics as pra
+BACKEND = "pyroomacoustics"
 if torch.cuda.is_available():
     import gpuRIR
     BACKEND = "gpuRIR"
 else:
-    import pyroomacoustics as pra
-    BACKEND = "pyroomacoustics"
+
 
 class RandomRirDataset(Dataset):
     """Generate a random room impulse response dataset."""
