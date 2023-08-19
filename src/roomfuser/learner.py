@@ -209,8 +209,8 @@ class DiffWaveLearner:
         )[0]
 
         for i in range(n_viz_samples):
-            axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted")
             axs[i].plot(audio[i].cpu().detach().numpy(), label="Target")
+            axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted")
             axs[i].legend()
 
         # Save the images
