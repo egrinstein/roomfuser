@@ -24,7 +24,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from roomfuser.dataset import from_path
-from roomfuser.dataset.random_sinusoid_dataset import get_random_sinusoid_config
+from roomfuser.dataset import get_random_room_config, get_random_sinusoid_config
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -128,7 +128,7 @@ class DiffWaveLearner:
                 progress_bar.update(1)
                 progress_bar.set_postfix(loss=loss.item())
             if n_epoch % self.params.n_viz_epochs == 0:
-                _log_output_viz(
+                self._log_output_viz(
                     self.model,
                     self.params.n_viz_samples,
                     self.params.audio_len,
@@ -183,6 +183,31 @@ class DiffWaveLearner:
         writer.flush()
         self.summary_writer = writer
 
+    def _log_output_viz(self, model, n_viz_samples, n_sample, epoch, outputs_dir):
+        fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1, figsize=(5, 15))
+
+        if self.params.dataset_name == "sinusoid": 
+            conditioner = torch.stack(
+                [get_random_sinusoid_config(cat=True) for _ in range(n_viz_samples)]
+            ).to(model.device)
+        elif self.params.dataset_name == "rir":
+            # TODO: Fetch room config from params
+            conditioner = torch.stack(
+                [get_random_room_config(cat=True) for _ in range(n_viz_samples)]
+            ).to(model.device)
+
+        outputs = predict_batch(
+            model, True, conditioner, model.device, n_sample, n_viz_samples
+        )[0]
+
+        for i in range(n_viz_samples):
+            axs[i].plot(outputs[i].cpu().detach().numpy())
+
+        # Save the images
+        os.makedirs(outputs_dir, exist_ok=True)
+        plt.tight_layout()
+        plt.savefig(f"{outputs_dir}/{epoch:04d}.png")
+
 
 def _train_impl(replica_id, model, dataset, args, params):
     torch.backends.cudnn.benchmark = True
@@ -224,23 +249,3 @@ def train_distributed(replica_id, replica_count, port, args, params):
     model = DiffWave(params).to(device)
     model = DistributedDataParallel(model, device_ids=[replica_id])
     _train_impl(replica_id, model, dataset, args, params)
-
-
-def _log_output_viz(model, n_viz_samples, n_sample, epoch, outputs_dir):
-    fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1, figsize=(5, 15))
-
-    conditioner = torch.stack(
-        [get_random_sinusoid_config(cat=True) for _ in range(n_viz_samples)]
-    ).to(model.device)
-
-    outputs = predict_batch(
-        model, True, conditioner, model.device, n_sample, n_viz_samples
-    )[0]
-
-    for i in range(n_viz_samples):
-        axs[i].plot(outputs[i].cpu().detach().numpy())
-
-    # Save the images
-    os.makedirs(outputs_dir, exist_ok=True)
-    plt.tight_layout()
-    plt.savefig(f"{outputs_dir}/{epoch:04d}.png")

@@ -21,7 +21,8 @@ import torch
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
-from .random_sinusoid_dataset import RandomSinusoidDataset
+from .random_sinusoid_dataset import RandomSinusoidDataset, get_random_sinusoid_config
+from .random_rir_dataset import RandomRirDataset, get_random_room_config
 
 
 class Collator:
@@ -71,10 +72,9 @@ def from_path(data_dirs, params, is_distributed=False):
             n_sample=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch
         )
     elif params.dataset_name == "rir":
-        from .random_rir_dataset import RandomRirDataset
-
         dataset = RandomRirDataset(
-            n_rir=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch
+            n_rir=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch,
+            backend=params.rir_backend
         )
     else:
         raise NotImplementedError(f"Unknown dataset: {params.dataset_name}")

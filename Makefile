@@ -1,2 +1,2 @@
 train:
-	@python -m src.roomfuser logs .
+	@cd src && python -m roomfuser logs .
