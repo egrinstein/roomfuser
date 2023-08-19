@@ -3,12 +3,22 @@ import torch
 
 from torch.utils.data import Dataset
 
-import pyroomacoustics as pra
-BACKEND = "pyroomacoustics"
-if torch.cuda.is_available():
+BACKEND = ""
+
+try:
+    import pyroomacoustics as pra
+    BACKEND = "pyroomacoustics"
+except:
+    pass
+
+try:
     import gpuRIR
     BACKEND = "gpuRIR"
-else:
+except:
+    pass
+
+if BACKEND == "":
+    raise ImportError("No backend found. Install gpuRIR or pyroomacoustics.")
 
 
 class RandomRirDataset(Dataset):
@@ -60,8 +70,10 @@ class RandomRirDataset(Dataset):
 
         if self.backend == "gpuRIR":
             rir = self.simulate_rir_gpurir(room_dims, rt60[0], self.absorption_range, source_pos, mic_pos)
-        else:
+        elif self.backend == "pyroomacoustics":
             rir = self.simulate_rir_pyroomacoustics(room_dims, rt60[0], source_pos, mic_pos)
+        else:
+            raise NotImplementedError("Unknown backend: {}".format(self.backend))
 
         if self.cat_labels:
             conditioner = np.concatenate(
