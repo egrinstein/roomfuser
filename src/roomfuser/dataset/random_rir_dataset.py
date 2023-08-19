@@ -108,8 +108,10 @@ class RandomRirDataset(Dataset):
                 Tdiff = Tmax  # Avoid issues with too short RIRs
             nb_img = gpuRIR.t2n(Tdiff, room_dims)
 
+        # TODO: This will generate random absorption coefficients for each surface
+        #       We should probably use this as a conditioning input to the model
         absorption = np.array([
-            np.random.uniform(absorption)
+            np.random.uniform(*absorption)
             for i in range(6) # 6: 6 surfaces
         ])
 
