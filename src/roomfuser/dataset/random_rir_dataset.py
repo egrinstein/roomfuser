@@ -90,7 +90,11 @@ class RandomRirDataset(Dataset):
                 "mic_pos": torch.from_numpy(mic_pos),
             }
         
-        return {"audio": rir[:self.n_rir], "conditioner": conditioner}
+        max_len = min(rir.shape[-1], self.n_rir)
+        # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
+        rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
+
+        return {"audio": rir, "conditioner": conditioner}
    
     def simulate_rir_gpurir(self, room_dims, rt60, absorption, source_pos, mic_pos):
         if rt60 == 0:
@@ -128,7 +132,7 @@ class RandomRirDataset(Dataset):
             Tdiff=Tdiff,
         )
 
-        return rir[0, 0]
+        return torch.from_numpy(rir[0, 0]).float()
 
     def simulate_rir_pyroomacoustics(self, room_dims, rt60, source_pos, mic_pos):
         e_absorption, max_order = pra.inverse_sabine(rt60, room_dims)
