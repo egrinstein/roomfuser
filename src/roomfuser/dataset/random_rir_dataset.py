@@ -123,7 +123,7 @@ class RandomRirDataset(Dataset):
         # TODO: This will generate random absorption coefficients for each surface
         #       We should probably use this as a conditioning input to the model
         absorption = np.array([
-            np.random.uniform(*absorption)
+            0.5 #np.random.uniform(*absorption)
             for i in range(6) # 6: 6 surfaces
         ])
 
