@@ -34,6 +34,7 @@ class RandomRirDataset(Dataset):
         sr: float = 16000,
         cat_labels: bool = True,
         backend: str = "auto",
+        normalize: bool = True,
     ):
         """
         n_rir: Size of each dataset sample
@@ -52,6 +53,8 @@ class RandomRirDataset(Dataset):
         self.absorption_range = np.array(absorption_range)
         self.sr = sr
         self.cat_labels = cat_labels
+
+        self.normalize = normalize
 
         if backend == "auto":
             self.backend = BACKEND
@@ -93,6 +96,11 @@ class RandomRirDataset(Dataset):
         max_len = min(rir.shape[-1], self.n_rir)
         # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
         rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
+
+        if self.normalize:
+            # Normalize the RIR using the maximum absolute value
+            rir = rir / torch.max(torch.abs(rir))
+
 
         return {"audio": rir, "conditioner": conditioner}
    

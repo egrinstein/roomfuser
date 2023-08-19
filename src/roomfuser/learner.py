@@ -24,7 +24,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from roomfuser.dataset import from_path
-from roomfuser.dataset import get_random_room_config, get_random_sinusoid_config
+from roomfuser.dataset import RandomRirDataset, get_random_sinusoid_config
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -192,8 +192,16 @@ class DiffWaveLearner:
             ).to(model.device)
         elif self.params.dataset_name == "rir":
             # TODO: Fetch room config from params
+            dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
+
+            target_samples = [
+                dataset[i] for i in range(n_viz_samples)
+            ]
             conditioner = torch.stack(
-                [get_random_room_config(cat=True) for _ in range(n_viz_samples)]
+                [target_sample["conditioner"] for target_sample in target_samples]
+            ).to(model.device)
+            audio = torch.stack(
+                [target_sample["audio"] for target_sample in target_samples]
             ).to(model.device)
 
         outputs = predict_batch(
@@ -201,7 +209,9 @@ class DiffWaveLearner:
         )[0]
 
         for i in range(n_viz_samples):
-            axs[i].plot(outputs[i].cpu().detach().numpy())
+            axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted")
+            axs[i].plot(audio[i].cpu().detach().numpy(), label="Target")
+            axs[i].legend()
 
         # Save the images
         os.makedirs(outputs_dir, exist_ok=True)
