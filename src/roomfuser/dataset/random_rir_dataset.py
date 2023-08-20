@@ -11,11 +11,12 @@ try:
 except:
     pass
 
-try:
-    import gpuRIR
-    BACKEND = "gpuRIR"
-except:
-    pass
+if torch.cuda.is_available():
+    try:
+        import gpuRIR
+        BACKEND = "gpuRIR"
+    except:
+        pass
 
 if BACKEND == "":
     raise ImportError("No backend found. Install gpuRIR or pyroomacoustics.")

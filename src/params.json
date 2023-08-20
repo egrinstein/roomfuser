@@ -1,8 +1,10 @@
 {
     "batch_size": 64,
-    "n_epochs": 10,
+    "n_epochs": 200,
+    "n_samples_per_epoch": 10000,
+    "n_conditioner": 10,
     "n_workers": null,
-    "learning_rate": 2e-4,
+    "learning_rate": 1e-5,
     "max_grad_norm": null,
     "sample_rate": 16000,
     "n_mels": 80,
@@ -24,10 +26,8 @@
         0.5
     ],
     "audio_len": 4000,
-    "n_samples_per_epoch": 200,
     "n_viz_epochs": 1,
     "n_viz_samples": 10,
-    "n_conditioner": 10,
     "noise_schedule": [
         0.0001,
         0.0011183673469387756,

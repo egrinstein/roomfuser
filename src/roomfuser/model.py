@@ -69,24 +69,9 @@ class DiffusionEmbedding(nn.Module):
     return table
 
 
-# class SpectrogramUpsampler(nn.Module):
-#   def __init__(self):
-#     super().__init__()
-#     self.conv1 = ConvTranspose2d(1, 1, [3, 32], stride=[1, 16], padding=[1, 8])
-#     self.conv2 = ConvTranspose2d(1, 1,  [3, 32], stride=[1, 16], padding=[1, 8])
-
-#   def forward(self, x):
-#     x = torch.unsqueeze(x, 1)
-#     x = self.conv1(x)
-#     x = F.leaky_relu(x, 0.4)
-#     x = self.conv2(x)
-#     x = F.leaky_relu(x, 0.4)
-#     x = torch.squeeze(x, 1)
-#     return x
-
-
 class ResidualBlock(nn.Module):
-  def __init__(self, n_conditioner, residual_channels, dilation, uncond=False):
+  def __init__(self, n_conditioner, residual_channels, dilation, uncond=False,
+               condition_time_idx=True):
     '''
     :param n_conditioner: inplanes of conv1x1 for spectrogram conditional
     :param residual_channels: audio conv
@@ -96,11 +81,14 @@ class ResidualBlock(nn.Module):
     super().__init__()
     self.dilated_conv = Conv1d(residual_channels, 2 * residual_channels, 3, padding=dilation, dilation=dilation)
     self.diffusion_projection = Linear(512, residual_channels)
+    
+    self.condition_time_idx = condition_time_idx
+    if condition_time_idx:
+      n_conditioner += 1
     if not uncond: # conditional model
-      # self.conditioner_projection = Conv1d(n_conditioner, 2 * residual_channels, 1)
-      self.conditioner_projection = nn.Linear(n_conditioner, 2 * residual_channels)
+        self.conditioner_projection = nn.Linear(n_conditioner, 2 * residual_channels)
     else: # unconditional model
-      self.conditioner_projection = None
+        self.conditioner_projection = None
 
     self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
 
@@ -113,8 +101,19 @@ class ResidualBlock(nn.Module):
     y = self.dilated_conv(y)
     
     if self.conditioner_projection is not None: # using a conditional model
-      conditioner = self.conditioner_projection(conditioner)
-      y += conditioner.unsqueeze(-1)
+
+        if self.condition_time_idx:
+            # add time index to conditioner
+            t = torch.linspace(0.0, 1.0, x.shape[-1], device=x.device).unsqueeze(0).repeat(x.shape[0], 1)
+            t = t.unsqueeze(1)
+            conditioner = conditioner.unsqueeze(-1).repeat(1, 1, x.shape[-1])
+            conditioner = torch.cat([conditioner, t], dim=1).transpose(1, 2)
+
+            conditioner = self.conditioner_projection(conditioner).transpose(1, 2)
+        else:
+            conditioner = self.conditioner_projection(conditioner).unsqueeze(-1)
+
+        y += conditioner
 
     gate, filter = torch.chunk(y, 2, dim=1)
     y = torch.sigmoid(gate) * torch.tanh(filter)
