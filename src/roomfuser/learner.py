@@ -86,17 +86,10 @@ class DiffWaveLearner:
         self.scaler.load_state_dict(state_dict["scaler"])
         self.step = state_dict["step"]
 
-    def save_to_checkpoint(self, filename="weights"):
+    def save_to_checkpoint(self, n_epoch, filename="weights"):
         save_basename = f"{filename}-{self.step}.pt"
         save_name = f"{self.model_dir}/{save_basename}"
-        link_name = f"{self.model_dir}/{filename}.pt"
         torch.save(self.state_dict(), save_name)
-        if os.name == "nt":
-            torch.save(self.state_dict(), link_name)
-        else:
-            if os.path.islink(link_name):
-                os.unlink(link_name)
-            os.symlink(save_basename, link_name)
 
     def restore_from_checkpoint(self, filename="weights"):
         try:
@@ -108,9 +101,11 @@ class DiffWaveLearner:
 
     def train(self):
         device = next(self.model.parameters()).device
+        best_loss = float("inf")
         for n_epoch in range(self.params.n_epochs):
             progress_bar = tqdm(total=len(self.dataset))
             progress_bar.set_description(f"Epoch: {n_epoch}")
+            epoch_loss = 0.0
             for features in self.dataset:
                 features = _nested_map(
                     features,
@@ -120,13 +115,14 @@ class DiffWaveLearner:
                 if torch.isnan(loss).any():
                     raise RuntimeError(f"Detected NaN loss at step {self.step}.")
                 if self.is_master:
-                    if self.step % 50 == 0:
+                    if self.step % 500 == 0:
                         self._write_summary(self.step, features, loss)
-                    if self.step % len(self.dataset) == 0:
-                        self.save_to_checkpoint()
                 self.step += 1
                 progress_bar.update(1)
                 progress_bar.set_postfix(loss=loss.item())
+                epoch_loss += loss.item()/len(self.dataset)
+            progress_bar.close()
+
             if n_epoch % self.params.n_viz_epochs == 0:
                 self._log_output_viz(
                     self.model,
@@ -135,7 +131,12 @@ class DiffWaveLearner:
                     n_epoch,
                     self.model_dir,
                 )
-
+            # Save the model if it's the best one so far
+            if self.is_master and epoch_loss < best_loss:
+                best_loss = epoch_loss
+                print(f"Saving best model with loss {best_loss}")
+                self.save_to_checkpoint(n_epoch)
+            
     def train_step(self, features):
         for param in self.model.parameters():
             param.grad = None
