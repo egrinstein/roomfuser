@@ -129,10 +129,6 @@ class DiffWave(nn.Module):
     self.params = params
     self.input_projection = Conv1d(1, params.residual_channels, 1)
     self.diffusion_embedding = DiffusionEmbedding(len(params.noise_schedule))
-    # if self.params.unconditional: # use unconditional model
-    #   self.spectrogram_upsampler = None
-    # else:
-    #   self.spectrogram_upsampler = SpectrogramUpsampler()
 
     self.residual_layers = nn.ModuleList([
         ResidualBlock(params.n_conditioner, params.residual_channels, 2**(i % params.dilation_cycle_length), uncond=params.unconditional)
@@ -146,15 +142,11 @@ class DiffWave(nn.Module):
       self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
 
   def forward(self, audio, diffusion_step, conditioner=None):
-    # assert (spectrogram is None and self.spectrogram_upsampler is None) or \
-    #        (spectrogram is not None and self.spectrogram_upsampler is not None)
     x = audio.unsqueeze(1)
     x = self.input_projection(x)
     x = F.relu(x)
 
     diffusion_step = self.diffusion_embedding(diffusion_step)
-    # if self.spectrogram_upsampler: # use conditional model
-    #   spectrogram = self.spectrogram_upsampler(spectrogram)
 
     if conditioner is not None:
       conditioner = self.cond_norm(conditioner)

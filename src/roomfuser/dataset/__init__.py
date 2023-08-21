@@ -21,8 +21,8 @@ import torch
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
-from .random_sinusoid_dataset import RandomSinusoidDataset, get_random_sinusoid_config
-from .random_rir_dataset import RandomRirDataset, get_random_room_config
+from .random_sinusoid_dataset import RandomSinusoidDataset
+from .random_rir_dataset import RandomRirDataset
 
 
 class Collator:
@@ -30,7 +30,6 @@ class Collator:
         self.params = params
 
     def collate(self, minibatch):
-        samples_per_frame = self.params.hop_samples
         for record in minibatch:
             if self.params.unconditional:
                 # Filter out records that aren't long enough.

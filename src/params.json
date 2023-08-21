@@ -1,22 +1,22 @@
 {
     "batch_size": 64,
     "n_epochs": 200,
-    "n_samples_per_epoch": 10000,
-    "n_conditioner": 10,
-    "n_workers": null,
+    "n_samples_per_epoch": 50000,
+    "n_log_epochs": 1,
+    "n_workers": 0,
     "learning_rate": 1e-5,
-    "max_grad_norm": null,
-    "sample_rate": 16000,
-    "n_mels": 80,
-    "n_fft": 1024,
-    "hop_samples": 256,
-    "crop_mel_frames": 62,
+    
     "residual_layers": 30,
     "residual_channels": 64,
     "dilation_cycle_length": 10,
+    
     "unconditional": false,
     "dataset_name": "rir",
-
+    "n_conditioner": 10,
+    "sample_rate": 16000,
+    "n_viz_samples": 10,
+    
+    "max_grad_norm": null,
     "inference_noise_schedule": [
         0.0001,
         0.001,
@@ -26,8 +26,6 @@
         0.5
     ],
     "audio_len": 4000,
-    "n_viz_epochs": 1,
-    "n_viz_samples": 10,
     "noise_schedule": [
         0.0001,
         0.0011183673469387756,

@@ -24,7 +24,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from roomfuser.dataset import from_path
-from roomfuser.dataset import RandomRirDataset, get_random_sinusoid_config
+from roomfuser.dataset import RandomRirDataset, RandomSinusoidDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -95,6 +95,7 @@ class DiffWaveLearner:
         try:
             checkpoint = torch.load(f"{self.model_dir}/{filename}.pt")
             self.load_state_dict(checkpoint)
+            print(f"Restored checkpoint from {self.model_dir}/{filename}.pt")
             return True
         except FileNotFoundError:
             return False
@@ -106,58 +107,63 @@ class DiffWaveLearner:
             progress_bar = tqdm(total=len(self.dataset))
             progress_bar.set_description(f"Epoch: {n_epoch}")
             epoch_loss = 0.0
-            for features in self.dataset:
-                features = _nested_map(
-                    features,
+            for batch in self.dataset:
+                batch = _nested_map(
+                    batch,
                     lambda x: x.to(device) if isinstance(x, torch.Tensor) else x,
                 )
-                loss = self.train_step(features)
+                loss = self.train_step(batch)
                 if torch.isnan(loss).any():
                     raise RuntimeError(f"Detected NaN loss at step {self.step}.")
-                if self.is_master:
-                    if self.step % 500 == 0:
-                        self._write_summary(self.step, features, loss)
                 self.step += 1
                 progress_bar.update(1)
                 progress_bar.set_postfix(loss=loss.item())
                 epoch_loss += loss.item()/len(self.dataset)
             progress_bar.close()
 
-            if n_epoch % self.params.n_viz_epochs == 0:
-                self._log_output_viz(
-                    self.model,
-                    self.params.n_viz_samples,
-                    self.params.audio_len,
-                    n_epoch,
-                    self.model_dir,
-                )
+            if self.is_master:
+                if n_epoch % self.params.n_log_epochs == 0:
+                    self._write_summary(n_epoch, batch, loss)
+                    self._log_output_viz(
+                        self.model,
+                        self.params.n_viz_samples,
+                        self.params.audio_len,
+                        n_epoch,
+                        self.model_dir,
+                    )
             # Save the model if it's the best one so far
             if self.is_master and epoch_loss < best_loss:
                 best_loss = epoch_loss
-                print(f"Saving best model with loss {best_loss}")
+                print(f"Epoch[{n_epoch}]: Saving best model with loss {best_loss}")
                 self.save_to_checkpoint(n_epoch)
             
-    def train_step(self, features):
+    def train_step(self, batch):
         for param in self.model.parameters():
             param.grad = None
 
-        audio = features["audio"]
-        spectrogram = features["conditioner"]
+        audio = batch["audio"]
+        conditioner = batch["conditioner"]
 
-        N, T = audio.shape
+        batch_size, T = audio.shape
         device = audio.device
         self.noise_level = self.noise_level.to(device)
 
         with self.autocast:
+            
+            # 1. Assign a timestep to each sample in the batch.
             t = torch.randint(
-                0, len(self.params.noise_schedule), [N], device=audio.device
+                0, len(self.params.noise_schedule), [batch_size], device=audio.device
             )
+            # 2. Get the corresponding noise for each sample, and add it to the audio.
             noise_scale = self.noise_level[t].unsqueeze(1)
             noise_scale_sqrt = noise_scale**0.5
             noise = torch.randn_like(audio)
             noisy_audio = noise_scale_sqrt * audio + (1.0 - noise_scale) ** 0.5 * noise
 
-            predicted = self.model(noisy_audio, t, spectrogram)
+            # 3. Compute the score (gradient of the likelihood) for the noisy audio.
+            predicted = self.model(noisy_audio, t, conditioner)
+
+            # 4. Compute the loss.
             loss = self.loss_fn(noise, predicted.squeeze(1))
 
         self.scaler.scale(loss).backward()
@@ -169,16 +175,14 @@ class DiffWaveLearner:
         self.scaler.update()
         return loss
 
-    def _write_summary(self, step, features, loss):
+    def _write_summary(self, step, batch, loss):
         writer = self.summary_writer or SummaryWriter(self.model_dir, purge_step=step)
         writer.add_audio(
             "feature/audio",
-            features["audio"][0],
+            batch["audio"][0],
             step,
             sample_rate=self.params.sample_rate,
         )
-        # if not self.params.unconditional:
-        #   writer.add_image('feature/spectrogram', torch.flip(features['conditioner'][:1], [1]), step)
         writer.add_scalar("train/loss", loss, step)
         writer.add_scalar("train/grad_norm", self.grad_norm, step)
         writer.flush()
@@ -187,12 +191,10 @@ class DiffWaveLearner:
     def _log_output_viz(self, model, n_viz_samples, n_sample, epoch, outputs_dir):
         fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1, figsize=(5, 15))
 
+        # TODO: Fetch room config from params
         if self.params.dataset_name == "sinusoid": 
-            conditioner = torch.stack(
-                [get_random_sinusoid_config(cat=True) for _ in range(n_viz_samples)]
-            ).to(model.device)
+            dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name == "rir":
-            # TODO: Fetch room config from params
             dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
 
             target_samples = [
@@ -259,4 +261,5 @@ def train_distributed(replica_id, replica_count, port, args, params):
     torch.cuda.set_device(device)
     model = DiffWave(params).to(device)
     model = DistributedDataParallel(model, device_ids=[replica_id])
+    model.params = params
     _train_impl(replica_id, model, dataset, args, params)

@@ -62,9 +62,6 @@ def predict_batch(model, fast_sampling, conditioner, device, audio_len, n_sample
         T = np.array(T, dtype=np.float32)
 
         if not model.params.unconditional:
-            # if len(conditioner.shape) == 2:# Expand rank 2 tensors by adding a batch dimension.
-            #   conditioner = conditioner.unsqueeze(0)
-            # audio = torch.randn(conditioner.shape[0], model.params.hop_samples * conditioner.shape[-1], device=device)
             audio = torch.randn(n_samples, audio_len, device=device)
             conditioner = conditioner.to(device)
         else:
