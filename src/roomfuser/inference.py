@@ -27,7 +27,7 @@ from roomfuser.model import DiffWave
 models = {}
 
 
-def predict_batch(model, fast_sampling, conditioner, device, audio_len, n_samples=1):
+def predict_batch(model, conditioner, device, audio_len, n_samples=1, fast_sampling=False):
     with torch.no_grad():
         # Change in notation from the DiffWave paper for fast sampling.
         # DiffWave paper -> Implementation below

@@ -93,7 +93,7 @@ class DiffWaveLearner:
 
     def restore_from_checkpoint(self, filename="weights"):
         try:
-            checkpoint = torch.load(f"{self.model_dir}/{filename}.pt")
+            checkpoint = torch.load(f"{self.model_dir}/{filename}.pt", map_location="cpu")
             self.load_state_dict(checkpoint)
             print(f"Restored checkpoint from {self.model_dir}/{filename}.pt")
             return True
@@ -208,7 +208,8 @@ class DiffWaveLearner:
             ).to(model.device)
 
         outputs = predict_batch(
-            model, True, conditioner, model.device, n_sample, n_viz_samples
+            model, conditioner, model.device, n_sample, n_viz_samples,
+            fast_sampling=self.params.fast_sampling
         )[0]
 
         for i in range(n_viz_samples):

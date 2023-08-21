@@ -4,7 +4,8 @@
     "n_samples_per_epoch": 50000,
     "n_log_epochs": 1,
     "n_workers": 0,
-    "learning_rate": 1e-5,
+    "learning_rate": 1e-4,
+    "fast_sampling": false,
     
     "residual_layers": 30,
     "residual_channels": 64,
