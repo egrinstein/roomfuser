@@ -25,6 +25,71 @@ if BACKEND == "":
     raise ImportError("No backend found. Install gpuRIR or pyroomacoustics.")
 
 
+class RirDataset(Dataset):
+    """Room impulse response dataset. Unlike RandomRirDataset, this dataset
+    loads RIRs from disk.
+    """
+
+    def __init__(
+        self,
+        dataset_path: str,
+        n_rir: int = None,
+        cat_labels: bool = True,
+        normalize: bool = True,
+    ):
+        """
+        dataset_path: Path to the dataset folder
+        n_rir: Number of RIRs to load. If None, load all RIRs in the dataset folder
+        cat_labels: whether to concatenate labels into a torch tensor or return them as a dict
+        normalize: whether to normalize the RIRs
+        """
+
+        self.dataset_path = dataset_path
+        self.n_rir = n_rir
+        self.cat_labels = cat_labels
+        self.normalize = normalize
+
+        self.rir_files = sorted(
+            [
+                f
+                for f in os.listdir(dataset_path)
+                if os.path.isfile(os.path.join(dataset_path, f))
+                and f.startswith("rir")
+                and f.endswith(".wav")
+            ]
+        )
+
+        if self.n_rir:
+            self.rir_files = self.rir_files[: self.n_rir]
+
+        super().__init__()
+    
+    def __len__(self):
+        return len(self.rir_files)
+    
+    def __getitem__(self, idx):
+        rir_path = os.path.join(self.dataset_path, self.rir_files[idx])
+        rir, sr = sf.read(rir_path)
+
+        if self.normalize:
+            # Normalize the RIR using the maximum absolute value
+            rir = rir / np.max(np.abs(rir))
+
+        label_filename = self.rir_files[idx].replace("rir", "label").replace(".wav", ".pt")
+        label_path = os.path.join(self.dataset_path, label_filename)
+        conditioner = torch.load(label_path)
+
+        if self.cat_labels:
+            conditioner = np.concatenate((
+                conditioner["room_dims"],
+                conditioner["source_pos"],
+                conditioner["mic_pos"],
+                conditioner["rt60"]
+            ), axis=0)
+
+        return {"audio": torch.from_numpy(rir).float(), "conditioner": conditioner}
+
+
 class RandomRirDataset(Dataset):
     """Generate a random room impulse response dataset."""
 

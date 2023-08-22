@@ -22,7 +22,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from .random_sinusoid_dataset import RandomSinusoidDataset
-from .random_rir_dataset import RandomRirDataset
+from .random_rir_dataset import RandomRirDataset, RirDataset
 
 
 class Collator:
@@ -71,6 +71,11 @@ def from_path(data_dirs, params, is_distributed=False):
             n_sample=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch
         )
     elif params.dataset_name == "rir":
+        if params.dataset_path:
+            dataset = RirDataset(
+                params.dataset_path,
+                n_rir=params.audio_len
+            )
         dataset = RandomRirDataset(
             n_rir=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch,
             backend=params.rir_backend
