@@ -33,16 +33,16 @@ class Collator:
         for record in minibatch:
             if self.params.unconditional:
                 # Filter out records that aren't long enough.
-                if len(record["audio"]) < self.params.audio_len:
+                if len(record["audio"]) < self.params.rir_len:
                     del record["conditioner"]
                     del record["audio"]
                     continue
 
-                # Crop bigger records to audio_len.
+                # Crop bigger records to rir_len.
                 start = random.randint(
-                    0, record["audio"].shape[-1] - self.params.audio_len
+                    0, record["audio"].shape[-1] - self.params.rir_len
                 )
-                end = start + self.params.audio_len
+                end = start + self.params.rir_len
                 record["audio"] = record["audio"][start:end]
                 record["audio"] = np.pad(
                     record["audio"],
@@ -68,18 +68,19 @@ class Collator:
 def from_path(data_dirs, params, is_distributed=False):
     if params.dataset_name == "sinusoid":
         dataset = RandomSinusoidDataset(
-            n_sample=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch
+            n_sample=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch
         )
     elif params.dataset_name == "rir":
         if os.path.exists(params.dataset_path):
             dataset = RirDataset(
                 params.dataset_path,
-                n_rir=params.audio_len
+                n_rir=params.rir_len
             )
-        dataset = RandomRirDataset(
-            n_rir=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch,
-            backend=params.rir_backend
-        )
+        else:
+            dataset = RandomRirDataset(
+                n_rir=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch,
+                backend=params.rir_backend
+            )
     else:
         raise NotImplementedError(f"Unknown dataset: {params.dataset_name}")
 

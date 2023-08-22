@@ -27,7 +27,7 @@ from roomfuser.model import DiffWave
 models = {}
 
 
-def predict_batch(model, conditioner, device, audio_len, n_samples=1, fast_sampling=False):
+def predict_batch(model, conditioner, device, rir_len, n_samples=1, fast_sampling=False):
     with torch.no_grad():
         # Change in notation from the DiffWave paper for fast sampling.
         # DiffWave paper -> Implementation below
@@ -62,10 +62,10 @@ def predict_batch(model, conditioner, device, audio_len, n_samples=1, fast_sampl
         T = np.array(T, dtype=np.float32)
 
         if not model.params.unconditional:
-            audio = torch.randn(n_samples, audio_len, device=device)
+            audio = torch.randn(n_samples, rir_len, device=device)
             conditioner = conditioner.to(device)
         else:
-            audio = torch.randn(n_samples, audio_len, device=device)
+            audio = torch.randn(n_samples, rir_len, device=device)
             conditioner = None
 
         for n in range(len(alpha) - 1, -1, -1):
@@ -109,7 +109,7 @@ def predict(
     model = models[model_dir]
     model.params.override(params)
 
-    return predict_batch(model, fast_sampling, spectrogram, device, params.audio_len)
+    return predict_batch(model, fast_sampling, spectrogram, device, params.rir_len)
 
 
 def main(args):

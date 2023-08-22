@@ -110,7 +110,7 @@ class DiffWaveLearner:
             for batch in self.dataset:
                 batch = _nested_map(
                     batch,
-                    lambda x: x.to(device) if isinstance(x, torch.Tensor) else x,
+                    lambda x: x.to(torch.float32).to(device) if isinstance(x, torch.Tensor) else x,
                 )
                 loss = self.train_step(batch)
                 if torch.isnan(loss).any():
@@ -127,7 +127,7 @@ class DiffWaveLearner:
                     self._log_output_viz(
                         self.model,
                         self.params.n_viz_samples,
-                        self.params.audio_len,
+                        self.params.rir_len,
                         n_epoch,
                         self.model_dir,
                     )

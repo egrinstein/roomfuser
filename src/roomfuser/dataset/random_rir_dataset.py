@@ -59,9 +59,6 @@ class RirDataset(Dataset):
             ]
         )
 
-        if self.n_rir:
-            self.rir_files = self.rir_files[: self.n_rir]
-
         super().__init__()
     
     def __len__(self):
@@ -71,10 +68,18 @@ class RirDataset(Dataset):
         rir_path = os.path.join(self.dataset_path, self.rir_files[idx])
         rir, sr = sf.read(rir_path)
 
+        # 1. Load RIR
+        rir = torch.from_numpy(rir).float()
         if self.normalize:
             # Normalize the RIR using the maximum absolute value
-            rir = rir / np.max(np.abs(rir))
+            rir = rir / torch.max(torch.abs(rir))
+        
+        if self.n_rir:
+            max_len = min(rir.shape[-1], self.n_rir)
+            # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
+            rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
 
+        # 2. Load conditioner (aka label)
         label_filename = self.rir_files[idx].replace("rir", "label").replace(".wav", ".pt")
         label_path = os.path.join(self.dataset_path, label_filename)
         conditioner = torch.load(label_path)
@@ -87,7 +92,7 @@ class RirDataset(Dataset):
                 conditioner["rt60"]
             ), axis=0)
 
-        return {"audio": torch.from_numpy(rir).float(), "conditioner": conditioner}
+        return {"audio": rir, "conditioner": conditioner}
 
 
 class RandomRirDataset(Dataset):
