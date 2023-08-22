@@ -136,6 +136,9 @@ class RandomRirDataset(Dataset):
         return self.n_samples_per_epoch
 
     def __getitem__(self, idx):
+        if idx >= len(self):
+            raise IndexError("Index out of range")
+
         room_dims, rt60, source_pos, mic_pos = get_random_room_config(
             self.room_dims_range, self.rt60_range, self.absorption_range
         )
