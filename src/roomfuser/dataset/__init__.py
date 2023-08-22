@@ -71,7 +71,7 @@ def from_path(data_dirs, params, is_distributed=False):
             n_sample=params.audio_len, n_samples_per_epoch=params.n_samples_per_epoch
         )
     elif params.dataset_name == "rir":
-        if params.dataset_path:
+        if os.path.exists(params.dataset_path):
             dataset = RirDataset(
                 params.dataset_path,
                 n_rir=params.audio_len
