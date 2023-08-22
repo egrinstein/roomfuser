@@ -3,3 +3,6 @@ train:
 
 submit:
 	@qsub qsub.pbs
+
+viz:
+	@cd src && python visualization.py

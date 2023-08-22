@@ -1,6 +1,6 @@
 from roomfuser.params import params
 
-from roomfuser.dataset.random_rir_dataset import save_rir_dataset
+from roomfuser.dataset.rir_dataset import save_rir_dataset
 
 
 if __name__ == "__main__":

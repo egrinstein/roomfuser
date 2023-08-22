@@ -208,7 +208,7 @@ class DiffWaveLearner:
             ).to(model.device)
 
         outputs = predict_batch(
-            model, conditioner, model.device, n_sample, n_viz_samples,
+            model, conditioner, n_viz_samples,
             fast_sampling=self.params.fast_sampling
         )[0]
 

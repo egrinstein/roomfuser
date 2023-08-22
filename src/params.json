@@ -1,5 +1,5 @@
 {
-    "batch_size": 64,
+    "batch_size": 16,
     "n_epochs": 200,
     "n_samples_per_epoch": 100000,
     "n_log_epochs": 1,
@@ -17,8 +17,9 @@
     "dataset_name": "rir",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "dataset_path": "/users/ezajlerg/datasets/roomfuser",
-    
+    "dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "model_path": "/Users/ezajlerg/src/roomfuser/src/logs/weights.pt",
+
     "max_grad_norm": null,
     "inference_noise_schedule": [
         0.0001,

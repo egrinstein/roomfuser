@@ -85,12 +85,12 @@ class RirDataset(Dataset):
         conditioner = torch.load(label_path)
 
         if self.cat_labels:
-            conditioner = np.concatenate((
-                conditioner["room_dims"],
-                conditioner["source_pos"],
-                conditioner["mic_pos"],
-                conditioner["rt60"]
-            ), axis=0)
+            conditioner = torch.cat((
+                conditioner["room_dims"].float(),
+                conditioner["source_pos"].float(),
+                conditioner["mic_pos"].float(),
+                conditioner["rt60"].float()
+            ), dim=0)
 
         return {"audio": rir, "conditioner": conditioner}
 

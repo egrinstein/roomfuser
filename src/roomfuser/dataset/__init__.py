@@ -22,7 +22,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from .random_sinusoid_dataset import RandomSinusoidDataset
-from .random_rir_dataset import RandomRirDataset, RirDataset
+from .rir_dataset import RandomRirDataset, RirDataset
 
 
 class Collator:

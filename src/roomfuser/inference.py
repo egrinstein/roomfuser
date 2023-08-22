@@ -27,7 +27,8 @@ from roomfuser.model import DiffWave
 models = {}
 
 
-def predict_batch(model, conditioner, device, rir_len, n_samples=1, fast_sampling=False):
+def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
+                  return_steps=False):
     with torch.no_grad():
         # Change in notation from the DiffWave paper for fast sampling.
         # DiffWave paper -> Implementation below
@@ -61,12 +62,12 @@ def predict_batch(model, conditioner, device, rir_len, n_samples=1, fast_samplin
                     break
         T = np.array(T, dtype=np.float32)
 
-        if not model.params.unconditional:
-            audio = torch.randn(n_samples, rir_len, device=device)
-            conditioner = conditioner.to(device)
-        else:
-            audio = torch.randn(n_samples, rir_len, device=device)
-            conditioner = None
+        audio = torch.randn(n_samples, model.params.rir_len, device=model.device)
+        if conditioner is not None:
+            conditioner = conditioner.to(model.device)
+ 
+        if return_steps:
+            steps = [audio]
 
         for n in range(len(alpha) - 1, -1, -1):
             c1 = 1 / alpha[n] ** 0.5
@@ -75,7 +76,7 @@ def predict_batch(model, conditioner, device, rir_len, n_samples=1, fast_samplin
                 audio
                 - c2
                 * model(
-                    audio, torch.tensor([T[n]], device=audio.device), conditioner
+                    audio, torch.tensor([T[n]], device=model.device), conditioner
                 ).squeeze(1)
             )
             if n > 0:
@@ -85,11 +86,17 @@ def predict_batch(model, conditioner, device, rir_len, n_samples=1, fast_samplin
                 ) ** 0.5
                 audio += sigma * noise
             audio = torch.clamp(audio, -1.0, 1.0)
+            if return_steps:
+                steps.append(audio)
+
+    if return_steps:
+        audio = torch.stack(steps, dim=1)
+
     return audio, model.params.sample_rate
 
 
 def predict(
-    spectrogram=None,
+    conditioner=None,
     model_dir=None,
     params=None,
     device=torch.device("cuda"),
@@ -109,16 +116,12 @@ def predict(
     model = models[model_dir]
     model.params.override(params)
 
-    return predict_batch(model, fast_sampling, spectrogram, device, params.rir_len)
+    return predict_batch(model, fast_sampling, conditioner)
 
 
 def main(args):
-    if args.spectrogram_path:
-        spectrogram = torch.from_numpy(np.load(args.spectrogram_path))
-    else:
-        spectrogram = None
+
     audio, sr = predict(
-        spectrogram,
         model_dir=args.model_dir,
         fast_sampling=args.fast,
         params=base_params,
