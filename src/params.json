@@ -6,6 +6,7 @@
     "n_workers": 0,
     "learning_rate": 1e-4,
     "fast_sampling": false,
+    "n_viz_samples": 10,
     
     "residual_layers": 30,
     "residual_channels": 64,
@@ -15,7 +16,7 @@
     "dataset_name": "rir",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "n_viz_samples": 10,
+    "dataset_path": "/users/ezajlerg/datasets/roomfuser",
     
     "max_grad_norm": null,
     "inference_noise_schedule": [

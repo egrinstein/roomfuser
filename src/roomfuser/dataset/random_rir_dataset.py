@@ -1,6 +1,9 @@
+import os
 import numpy as np
+import soundfile as sf
 import torch
 
+from tqdm import tqdm
 from torch.utils.data import Dataset
 
 BACKEND = ""
@@ -30,7 +33,7 @@ class RandomRirDataset(Dataset):
         n_rir: int,
         n_samples_per_epoch: int,
         room_dims_range: tuple = ((3, 10), (3, 10), (2, 4)),
-        rt60_range: tuple = (0.2, 0.8),
+        rt60_range: tuple = (0.2, 1.2),
         absorption_range: tuple = (0.5, 1),
         sr: float = 16000,
         cat_labels: bool = True,
@@ -94,9 +97,10 @@ class RandomRirDataset(Dataset):
                 "mic_pos": torch.from_numpy(mic_pos),
             }
         
-        max_len = min(rir.shape[-1], self.n_rir)
-        # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
-        rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
+        if self.n_rir:
+            max_len = min(rir.shape[-1], self.n_rir)
+            # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
+            rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
 
         if self.normalize:
             # Normalize the RIR using the maximum absolute value
@@ -165,7 +169,7 @@ class RandomRirDataset(Dataset):
 
 def get_random_room_config(
     room_dims_range: tuple = ((3, 10), (3, 10), (2, 4)),
-    rt60_range: tuple = (0.2, 0.8),
+    rt60_range: tuple = (0.2, 1.2),
     absorption_range: tuple = (0.5, 1), cat=False
     ):    
     # 1. Generate random room
@@ -190,3 +194,59 @@ def get_random_room_config(
         out = torch.from_numpy(out).float()
 
     return out
+
+
+def save_rir_dataset(
+    dataset_path: str,
+    n_dataset: int,
+    room_dims_range: tuple = ((3, 10), (3, 10), (2, 4)),
+    rt60_range: tuple = (0.2, 1.2),
+    absorption_range: tuple = (0.5, 1),
+    sr: float = 16000,
+    backend: str = "auto",
+    c=343):
+    """Save a random room impulse response dataset to disk.
+
+    params:
+        dataset_path: Path to the dataset folder
+        n_dataset: Dataset size
+        room_dims_range: 3d tuple of tuples with the range of the room dimensions in meters
+        rt60_range: Reverberation time range of the room in seconds
+        absorption_range: wall absorption coefficients
+        sr: Sample rate of the generated RIRs
+        backend: "gpuRIR" or "pyroomacoustics",
+        c: Speed of sound in m/s
+    """
+
+    max_room = np.array([r[1] for r in room_dims_range])
+    max_room_diag = np.linalg.norm(max_room)
+
+    n_rir = rt60_range[-1] + max_room_diag/c
+    n_rir = int(n_rir * sr)
+
+    # Number of samples is the RT60 in seconds times the sample rate plus the propagation from the room diagonal
+
+    dataset = RandomRirDataset(
+        n_rir=n_rir,
+        n_samples_per_epoch=n_dataset,
+        room_dims_range=room_dims_range,
+        rt60_range=rt60_range,
+        absorption_range=absorption_range,
+        sr=sr,
+        cat_labels=False,
+        backend=backend,
+        normalize=False
+    )
+
+    os.makedirs(dataset_path, exist_ok=True) 
+
+    for i, d in tqdm(enumerate(dataset), total=len(dataset)):
+        audio = d["audio"]
+        conditioner = d["conditioner"]
+
+        rir_path = os.path.join(dataset_path, f"rir_{i}.wav")
+        label_path = os.path.join(dataset_path, f"label_{i}.pt")
+
+        sf.write(rir_path, audio, sr)
+
+        torch.save(conditioner, label_path)
