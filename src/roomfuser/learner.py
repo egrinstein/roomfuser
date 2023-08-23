@@ -82,20 +82,21 @@ class DiffWaveLearner:
             self.model.module.load_state_dict(state_dict["model"], strict=False)
         else:
             self.model.load_state_dict(state_dict["model"])
-        self.optimizer.load_state_dict(state_dict["optimizer"])
-        self.scaler.load_state_dict(state_dict["scaler"])
-        self.step = state_dict["step"]
+        # self.optimizer.load_state_dict(state_dict["optimizer"])
+        # self.scaler.load_state_dict(state_dict["scaler"])
+        # self.step = state_dict["step"]
 
     def save_to_checkpoint(self, n_epoch, filename="weights"):
         save_basename = f"{filename}-{self.step}.pt"
         save_name = f"{self.model_dir}/{save_basename}"
         torch.save(self.state_dict(), save_name)
 
-    def restore_from_checkpoint(self, filename="weights"):
+    def restore_from_checkpoint(self):
+        model_path = self.params.model_path
         try:
-            checkpoint = torch.load(f"{self.model_dir}/{filename}.pt", map_location="cpu")
+            checkpoint = torch.load(f"{model_path}", map_location="cpu")
             self.load_state_dict(checkpoint)
-            print(f"Restored checkpoint from {self.model_dir}/{filename}.pt")
+            print(f"Restored checkpoint from {model_path}")
             return True
         except FileNotFoundError:
             return False

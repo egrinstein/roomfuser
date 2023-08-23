@@ -98,7 +98,7 @@ class ResidualBlock(nn.Module):
         if condition_time_idx:
             n_conditioner += 1
        
-        self.conditioner_projection_fc = nn.Linear(
+        self.conditioner_projection_fc = Linear(
             n_conditioner, 2 * residual_channels
         )
 
