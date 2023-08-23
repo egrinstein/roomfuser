@@ -23,6 +23,7 @@ from torch.utils.data import DataLoader
 
 from .random_sinusoid_dataset import RandomSinusoidDataset
 from .rir_dataset import RandomRirDataset, RirDataset
+from .fast_rir_dataset import FastRirDataset
 
 
 class Collator:
@@ -30,38 +31,14 @@ class Collator:
         self.params = params
 
     def collate(self, minibatch):
-        for record in minibatch:
-            if self.params.unconditional:
-                # Filter out records that aren't long enough.
-                if len(record["audio"]) < self.params.rir_len:
-                    del record["conditioner"]
-                    del record["audio"]
-                    continue
-
-                # Crop bigger records to rir_len.
-                start = random.randint(
-                    0, record["audio"].shape[-1] - self.params.rir_len
-                )
-                end = start + self.params.rir_len
-                record["audio"] = record["audio"][start:end]
-                record["audio"] = np.pad(
-                    record["audio"],
-                    (0, (end - start) - len(record["audio"])),
-                    mode="constant",
-                )
-
         audio = np.stack([record["audio"] for record in minibatch if "audio" in record])
-        if self.params.unconditional:
-            return {
-                "audio": torch.from_numpy(audio),
-                "conditioner": None,
-            }
-        spectrogram = np.stack(
+        
+        conditioner = np.stack(
             [record["conditioner"] for record in minibatch if "conditioner" in record]
         )
         return {
             "audio": torch.from_numpy(audio),
-            "conditioner": torch.from_numpy(spectrogram),
+            "conditioner": torch.from_numpy(conditioner),
         }
 
 
@@ -81,6 +58,11 @@ def from_path(data_dirs, params, is_distributed=False):
                 n_rir=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch,
                 backend=params.rir_backend
             )
+    elif params.dataset_name == "fast_rir":
+        dataset = FastRirDataset(
+            params.fast_rir_dataset_path,
+            n_rir=params.rir_len
+        )
     else:
         raise NotImplementedError(f"Unknown dataset: {params.dataset_name}")
 

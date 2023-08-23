@@ -77,14 +77,12 @@ class ResidualBlock(nn.Module):
         n_conditioner,
         residual_channels,
         dilation,
-        uncond=False,
         condition_time_idx=True,
     ):
         """
-        :param n_conditioner: inplanes of conv1x1 for spectrogram conditional
+        :param n_conditioner: size of conditioner
         :param residual_channels: audio conv
         :param dilation: audio conv dilation
-        :param uncond: disable spectrogram conditional
         """
         super().__init__()
         self.dilated_conv = Conv1d(
@@ -99,12 +97,10 @@ class ResidualBlock(nn.Module):
         self.condition_time_idx = condition_time_idx
         if condition_time_idx:
             n_conditioner += 1
-        if not uncond:  # conditional model
-            self.conditioner_projection_fc = nn.Linear(
-                n_conditioner, 2 * residual_channels
-            )
-        else:  # unconditional model
-            self.conditioner_projection_fc = None
+       
+        self.conditioner_projection_fc = nn.Linear(
+            n_conditioner, 2 * residual_channels
+        )
 
         self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
 
@@ -156,7 +152,6 @@ class DiffWave(nn.Module):
                     params.n_conditioner,
                     params.residual_channels,
                     2 ** (i % params.dilation_cycle_length),
-                    uncond=params.unconditional,
                 )
                 for i in range(params.residual_layers)
             ]
@@ -167,8 +162,8 @@ class DiffWave(nn.Module):
         self.output_projection = Conv1d(params.residual_channels, 1, 1)
         nn.init.zeros_(self.output_projection.weight)
 
-        if not params.unconditional:
-            self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
+
+        #self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
 
     def forward(self, audio, diffusion_step, conditioner=None):
         x = audio.unsqueeze(1)
@@ -177,8 +172,8 @@ class DiffWave(nn.Module):
 
         diffusion_step = self.diffusion_embedding(diffusion_step)
 
-        if conditioner is not None:
-            conditioner = self.cond_norm(conditioner)
+        # if conditioner is not None:
+        #     conditioner = self.cond_norm(conditioner)
 
         skip = None
         for layer in self.residual_layers:
