@@ -7,7 +7,7 @@
     "learning_rate": 1e-4,
     "fast_sampling": false,
     "n_viz_samples": 10,
-    "rir_len": 4000,
+    "rir_len": 22050,
     
     "residual_layers": 30,
     "residual_channels": 64,
@@ -16,9 +16,9 @@
     "unconditional": false,
     "dataset_name": "rir",
     "n_conditioner": 10,
-    "sample_rate": 16000,
+    "sample_rate": 22050,
     "dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
-    "model_path": "/Users/ezajlerg/src/roomfuser/src/logs/weights.pt",
+    "model_path": "roomfuser/diffwave-ljspeech-22kHz-1000578.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

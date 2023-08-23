@@ -79,7 +79,7 @@ class DiffWaveLearner:
 
     def load_state_dict(self, state_dict):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
-            self.model.module.load_state_dict(state_dict["model"])
+            self.model.module.load_state_dict(state_dict["model"], strict=False)
         else:
             self.model.load_state_dict(state_dict["model"])
         self.optimizer.load_state_dict(state_dict["optimizer"])

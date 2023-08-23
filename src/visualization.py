@@ -77,7 +77,8 @@ def generate_random_rir():
     )
 
     model = DiffWave(params)
-    model.load_state_dict(torch.load(params.model_path, map_location="cpu")["model"])
+    
+    model.load_state_dict(params.model_path)
     model.device = torch.device("cpu")
     model.eval()
 
