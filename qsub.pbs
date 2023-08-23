@@ -1,0 +1,12 @@
+#PBS -l walltime=24:00:00
+      
+#PBS -l select=1:ncpus=4:mem=32gb:ngpus=3
+
+#PBS -N roomfuser
+
+module load anaconda3/personal
+source activate py39
+
+cd $PBS_O_WORKDIR/
+
+make train
