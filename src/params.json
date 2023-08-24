@@ -16,9 +16,9 @@
     "dataset_name": "fast_rir",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
-    "fast_rir_dataset_path": "/rds/general/user/ezajlerg/home/datasets/fast_rir",
-    "model_path": "roomfuser/diffwave-ljspeech-22kHz-1000578.pt",
+    "gpu_rir_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
+    "model_path": "logs/weights-pretrained.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

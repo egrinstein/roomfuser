@@ -25,7 +25,7 @@ class FastRirDataset(Dataset):
         normalize: whether to normalize the RIRs
         """
 
-        self.dataset_path = os.path.join(dataset_path, "Medium_room")
+        self.dataset_path = dataset_path
         self.n_rir = n_rir
         
         self.rir_path = os.path.join(self.dataset_path, "RIR")

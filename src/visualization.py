@@ -9,7 +9,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from tqdm import trange
 
 from roomfuser.params import params
-from roomfuser.dataset.rir_dataset import RirDataset
+from roomfuser.dataset import RirDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -71,10 +71,16 @@ def plot_diffusion(steps: np.array, target: np.array = None):
 
 
 def generate_random_rir():
-    rir_dataset = RirDataset(
-        params.dataset_path,
-        n_rir=params.rir_len,
-    )
+    if params.dataset_name == "fast_rir":
+        rir_dataset = FastRirDataset(
+            params.fast_rir_dataset_path,
+            n_rir=params.rir_len,
+        )
+    else:
+        rir_dataset = RirDataset(
+            params.gpu_rir_dataset_path,
+            n_rir=params.rir_len,
+        )
 
     model = DiffWave(params)
     

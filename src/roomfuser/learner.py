@@ -87,7 +87,7 @@ class DiffWaveLearner:
         # self.step = state_dict["step"]
 
     def save_to_checkpoint(self, n_epoch, filename="weights"):
-        save_basename = f"{filename}-{self.step}.pt"
+        save_basename = f"{filename}-{n_epoch}.pt"
         save_name = f"{self.model_dir}/{save_basename}"
         torch.save(self.state_dict(), save_name)
 
