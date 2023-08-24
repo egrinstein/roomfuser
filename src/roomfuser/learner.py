@@ -23,8 +23,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from roomfuser.dataset import from_path
-from roomfuser.dataset import RandomRirDataset, RandomSinusoidDataset
+from roomfuser.dataset import from_path, RandomRirDataset, RandomSinusoidDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -198,7 +197,7 @@ class DiffWaveLearner:
         elif self.params.dataset_name in ["rir", "fast_rir"]:
             if self.params.dataset_name == "rir":
                 dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
-            elif self.params.dataset_name == "fast_rir"
+            elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample)
 
             target_samples = [
