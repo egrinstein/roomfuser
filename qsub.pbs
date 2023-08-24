@@ -1,6 +1,6 @@
 #PBS -l walltime=24:00:00
       
-#PBS -l select=1:ncpus=4:mem=32gb:ngpus=3
+#PBS -l select=1:ncpus=2:mem=16gb:ngpus=1
 
 #PBS -N roomfuser
 

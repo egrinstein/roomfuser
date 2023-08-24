@@ -195,8 +195,11 @@ class DiffWaveLearner:
         # TODO: Fetch room config from params
         if self.params.dataset_name == "sinusoid": 
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
-        elif self.params.dataset_name == "rir":
-            dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
+        elif self.params.dataset_name in ["rir", "fast_rir"]:
+            if self.params.dataset_name == "rir":
+                dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
+            elif self.params.dataset_name == "fast_rir"
+                dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample)
 
             target_samples = [
                 dataset[i] for i in range(n_viz_samples)
@@ -207,7 +210,7 @@ class DiffWaveLearner:
             audio = torch.stack(
                 [target_sample["audio"] for target_sample in target_samples]
             ).to(model.device)
-
+        
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
             fast_sampling=self.params.fast_sampling
