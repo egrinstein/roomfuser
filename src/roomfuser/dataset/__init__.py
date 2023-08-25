@@ -31,15 +31,23 @@ class Collator:
         self.params = params
 
     def collate(self, minibatch):
-        audio = np.stack([record["audio"] for record in minibatch if "audio" in record])
+
+        output = {}
+ 
+        output["audio"] = torch.stack([
+            record["audio"] for record in minibatch])
         
-        conditioner = np.stack(
-            [record["conditioner"] for record in minibatch if "conditioner" in record]
-        )
-        return {
-            "audio": torch.from_numpy(audio),
-            "conditioner": torch.from_numpy(conditioner),
-        }
+        if "conditioner" in minibatch[0]:
+            output["conditioner"] = torch.stack(
+                [record["conditioner"] for record in minibatch]
+            )
+
+        if "envelope" in minibatch[0]:
+            output["envelope"] = torch.stack(
+                [record["envelope"] for record in minibatch]
+            )
+
+        return output
 
 
 def from_path(data_dirs, params, is_distributed=False):

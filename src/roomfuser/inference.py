@@ -28,7 +28,7 @@ models = {}
 
 
 def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
-                  return_steps=False):
+                  return_steps=False, envelopes=None):
     with torch.no_grad():
         # Change in notation from the DiffWave paper for fast sampling.
         # DiffWave paper -> Implementation below
@@ -63,6 +63,9 @@ def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
         T = np.array(T, dtype=np.float32)
 
         audio = torch.randn(n_samples, model.params.rir_len, device=model.device)
+        if envelopes is not None: # Weight the noise by the RIR envelopes
+            audio *= envelopes
+
         if conditioner is not None:
             conditioner = conditioner.to(model.device)
  
@@ -101,6 +104,7 @@ def predict(
     params=None,
     device=torch.device("cuda"),
     fast_sampling=False,
+    envelopes=None,
 ):
     # Lazy load model.
     if not model_dir in models:
@@ -116,11 +120,10 @@ def predict(
     model = models[model_dir]
     model.params.override(params)
 
-    return predict_batch(model, fast_sampling, conditioner)
+    return predict_batch(model, fast_sampling, conditioner, envelopes=envelopes)
 
 
 def main(args):
-
     audio, sr = predict(
         model_dir=args.model_dir,
         fast_sampling=args.fast,

@@ -154,10 +154,14 @@ class DiffWaveLearner:
             t = torch.randint(
                 0, len(self.params.noise_schedule), [batch_size], device=audio.device
             )
+            
+            noise = torch.randn_like(audio)
+            if "envelope" in batch: # Weight the noise by the RIR envelopes
+                noise *= batch["envelope"]
+
             # 2. Get the corresponding noise for each sample, and add it to the audio.
             noise_scale = self.noise_level[t].unsqueeze(1)
             noise_scale_sqrt = noise_scale**0.5
-            noise = torch.randn_like(audio)
             noisy_audio = noise_scale_sqrt * audio + (1.0 - noise_scale) ** 0.5 * noise
 
             # 3. Compute the score (gradient of the likelihood) for the noisy audio.
@@ -191,8 +195,7 @@ class DiffWaveLearner:
     def _log_output_viz(self, model, n_viz_samples, n_sample, epoch, outputs_dir):
         fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1, figsize=(5, 15))
 
-        # TODO: Fetch room config from params
-        if self.params.dataset_name == "sinusoid": 
+        if self.params.dataset_name == "sinusoid": # Debug task
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name in ["rir", "fast_rir"]:
             if self.params.dataset_name == "rir":
@@ -209,10 +212,17 @@ class DiffWaveLearner:
             audio = torch.stack(
                 [target_sample["audio"] for target_sample in target_samples]
             ).to(model.device)
+
+            if "envelope" in target_samples[0]:
+                envelopes = torch.stack(
+                    [target_sample["envelope"] for target_sample in target_samples]
+                ).to(model.device)
+            else:
+                envelopes = None
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            fast_sampling=self.params.fast_sampling
+            fast_sampling=self.params.fast_sampling, envelopes=envelopes
         )[0]
 
         for i in range(n_viz_samples):

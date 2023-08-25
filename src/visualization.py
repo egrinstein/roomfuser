@@ -10,11 +10,12 @@ from tqdm import trange
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
+from roomfuser.dataset.fast_rir_dataset import decode_conditioner, get_rir_envelope
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
 
-def plot_diffusion(steps: np.array, target: np.array = None):
+def plot_diffusion(steps: np.array, target: np.array = None, labels=None, sr: int = 16000):
     """Plot the diffusion process.
 
     Args:
@@ -42,6 +43,22 @@ def plot_diffusion(steps: np.array, target: np.array = None):
 
     if target is not None:
         ax.plot(target, label="Target", alpha=0.5)
+        
+    # Plot the envelope of the RIR based on the RT60
+    if labels is not None:
+        labels = decode_conditioner(labels)
+
+        envelope = get_rir_envelope(
+            n_envelope=steps.shape[1],
+            source_pos=labels["source_position"],
+            mic_pos=labels["microphone_position"],
+            rt60=labels["rt60"],
+            sr=sr,
+        )
+
+        ax.plot(envelope, label="RT60={:.2f}".format(labels["rt60"]))
+
+    if target is not None or labels is not None:
         ax.legend(loc='upper right')
 
     def init():
@@ -92,17 +109,19 @@ def generate_random_rir():
     os.makedirs(animations_dir, exist_ok=True)
 
     for i in trange(params.n_viz_samples):
+        i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
         target_audio = d["audio"].numpy()
         target_label = d["conditioner"]
+        envelopes = d["envelope"] if "envelope" in d else None
         
         # Generate audio
-        audio, sr = predict_batch(model, conditioner=target_label.unsqueeze(0),
+        audio, sr = predict_batch(model, conditioner=target_label.unsqueeze(0), envelopes=envelopes,
                               n_samples=1, fast_sampling=False, return_steps=True)
         audio = audio[0].numpy()
 
         # Plot diffusion process
-        anim = plot_diffusion(audio, target_audio)
+        anim = plot_diffusion(audio, target_audio, labels=target_label)
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 
 
