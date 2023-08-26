@@ -18,7 +18,7 @@
     "sample_rate": 16000,
     "gpu_rir_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
-    "model_path": "",
+    "model_path": "logs/animations/weights-pretrained-envelope.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

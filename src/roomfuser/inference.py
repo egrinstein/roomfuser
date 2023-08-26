@@ -84,6 +84,8 @@ def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
             )
             if n > 0:
                 noise = torch.randn_like(audio)
+                if envelopes is not None: # Weight the noise by the RIR envelopes
+                    noise *= envelopes
                 sigma = (
                     (1.0 - alpha_cum[n - 1]) / (1.0 - alpha_cum[n]) * beta[n]
                 ) ** 0.5
