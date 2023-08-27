@@ -22,7 +22,7 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from .random_sinusoid_dataset import RandomSinusoidDataset
-from .rir_dataset import RandomRirDataset, RirDataset
+from .roomfuser_dataset import RandomRirDataset, RirDataset
 from .fast_rir_dataset import FastRirDataset
 
 
@@ -41,12 +41,11 @@ class Collator:
             output["conditioner"] = torch.stack(
                 [record["conditioner"] for record in minibatch]
             )
-
-        if "envelope" in minibatch[0]:
-            output["envelope"] = torch.stack(
-                [record["envelope"] for record in minibatch]
-            )
-
+        
+        if "labels" in minibatch[0]:
+            output["labels"] = [
+                record["labels"] for record in minibatch
+            ]
         return output
 
 
@@ -55,10 +54,10 @@ def from_path(data_dirs, params, is_distributed=False):
         dataset = RandomSinusoidDataset(
             n_sample=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch
         )
-    elif params.dataset_name == "rir":
-        if os.path.exists(params.gpu_rir_dataset_path):
+    elif params.dataset_name == "roomfuser":
+        if os.path.exists(params.roomfuser_dataset_path):
             dataset = RirDataset(
-                params.gpu_rir_dataset_path,
+                params.roomfuser_dataset_path,
                 n_rir=params.rir_len
             )
         else:

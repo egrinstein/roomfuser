@@ -27,7 +27,7 @@ from roomfuser.model import DiffWave
 models = {}
 
 
-def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
+def predict_batch(model, conditioner=None, batch_size=1, fast_sampling=False,
                   return_steps=False, envelopes=None):
     with torch.no_grad():
         # Change in notation from the DiffWave paper for fast sampling.
@@ -62,7 +62,7 @@ def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
                     break
         T = np.array(T, dtype=np.float32)
 
-        audio = torch.randn(n_samples, model.params.rir_len, device=model.device)
+        audio = torch.randn(batch_size, model.params.rir_len, device=model.device)
         if envelopes is not None: # Weight the noise by the RIR envelopes
             audio *= envelopes
 
@@ -75,13 +75,11 @@ def predict_batch(model, conditioner=None, n_samples=1, fast_sampling=False,
         for n in range(len(alpha) - 1, -1, -1):
             c1 = 1 / alpha[n] ** 0.5
             c2 = beta[n] / (1 - alpha_cum[n]) ** 0.5
-            audio = c1 * (
-                audio
-                - c2
-                * model(
-                    audio, torch.tensor([T[n]], device=model.device), conditioner
-                ).squeeze(1)
-            )
+            model_output = model(
+                audio, torch.tensor([T[n]], device=model.device), conditioner
+            ).squeeze(1)
+            audio = c1 * (audio - c2 * model_output)
+
             if n > 0:
                 noise = torch.randn_like(audio)
                 if envelopes is not None: # Weight the noise by the RIR envelopes

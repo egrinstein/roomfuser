@@ -163,7 +163,7 @@ class DiffWave(nn.Module):
         nn.init.zeros_(self.output_projection.weight)
 
 
-        #self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
+        self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
 
     def forward(self, audio, diffusion_step, conditioner=None):
         x = audio.unsqueeze(1)
@@ -172,8 +172,8 @@ class DiffWave(nn.Module):
 
         diffusion_step = self.diffusion_embedding(diffusion_step)
 
-        # if conditioner is not None:
-        #     conditioner = self.cond_norm(conditioner)
+        if conditioner is not None:
+            conditioner = self.cond_norm(conditioner)
 
         skip = None
         for layer in self.residual_layers:

@@ -26,16 +26,7 @@ from tqdm import tqdm
 from roomfuser.dataset import from_path, RandomRirDataset, RandomSinusoidDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
-
-
-def _nested_map(struct, map_fn):
-    if isinstance(struct, tuple):
-        return tuple(_nested_map(x, map_fn) for x in struct)
-    if isinstance(struct, list):
-        return [_nested_map(x, map_fn) for x in struct]
-    if isinstance(struct, dict):
-        return {k: _nested_map(v, map_fn) for k, v in struct.items()}
-    return map_fn(struct)
+from roomfuser.noise_scheduler import NoiseScheduler
 
 
 class DiffWaveLearner:
@@ -51,9 +42,9 @@ class DiffWaveLearner:
         self.step = 0
         self.is_master = True
 
-        beta = np.array(self.params.noise_schedule)
-        noise_level = np.cumprod(1 - beta)
-        self.noise_level = torch.tensor(noise_level.astype(np.float32))
+        self.noise_scheduler = NoiseScheduler(self.params.noise_schedule,
+                                              not params.trim_direct_path,
+                                              params.prior_variance_mode)
         self.loss_fn = nn.L1Loss()
         self.summary_writer = None
 
@@ -143,10 +134,12 @@ class DiffWaveLearner:
 
         audio = batch["audio"]
         conditioner = batch["conditioner"]
+        labels = batch["labels"]
+        envelope = self.noise_scheduler.get_envelope(audio, labels)
 
         batch_size, T = audio.shape
         device = audio.device
-        self.noise_level = self.noise_level.to(device)
+        self.noise_scheduler.noise_level = self.noise_scheduler.noise_level.to(device)
 
         with self.autocast:
             
@@ -155,14 +148,10 @@ class DiffWaveLearner:
                 0, len(self.params.noise_schedule), [batch_size], device=audio.device
             )
             
-            noise = torch.randn_like(audio)
-            if "envelope" in batch: # Weight the noise by the RIR envelopes
-                noise *= batch["envelope"]
-
-            # 2. Get the corresponding noise for each sample, and add it to the audio.
-            noise_scale = self.noise_level[t].unsqueeze(1)
-            noise_scale_sqrt = noise_scale**0.5
-            noisy_audio = noise_scale_sqrt * audio + (1.0 - noise_scale) ** 0.5 * noise
+            # # 2. Get the corresponding noise for each sample, and add it to the audio.
+            noisy_audio, noise = self.noise_scheduler.add_noise_to_audio(
+                audio, t, envelope
+            )
 
             # 3. Compute the score (gradient of the likelihood) for the noisy audio.
             predicted = self.model(noisy_audio, t, conditioner)
@@ -197,8 +186,8 @@ class DiffWaveLearner:
 
         if self.params.dataset_name == "sinusoid": # Debug task
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
-        elif self.params.dataset_name in ["rir", "fast_rir"]:
-            if self.params.dataset_name == "rir":
+        elif self.params.dataset_name in ["roomfuser", "fast_rir"]:
+            if self.params.dataset_name == "roomfuser":
                 dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample)
@@ -212,13 +201,10 @@ class DiffWaveLearner:
             audio = torch.stack(
                 [target_sample["audio"] for target_sample in target_samples]
             ).to(model.device)
+            labels = [target_sample["labels"] for target_sample in target_samples]
 
-            if "envelope" in target_samples[0]:
-                envelopes = torch.stack(
-                    [target_sample["envelope"] for target_sample in target_samples]
-                ).to(model.device)
-            else:
-                envelopes = None
+            envelopes = self.noise_scheduler.get_envelope(audio, labels).to(model.device)
+
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
@@ -246,6 +232,16 @@ def _train_impl(replica_id, model, dataset, args, params):
     learner.is_master = replica_id == 0
     learner.restore_from_checkpoint()
     learner.train()
+
+
+def _nested_map(struct, map_fn):
+    if isinstance(struct, tuple):
+        return tuple(_nested_map(x, map_fn) for x in struct)
+    if isinstance(struct, list):
+        return [_nested_map(x, map_fn) for x in struct]
+    if isinstance(struct, dict):
+        return {k: _nested_map(v, map_fn) for k, v in struct.items()}
+    return map_fn(struct)
 
 
 def train(args, params):
@@ -277,3 +273,5 @@ def train_distributed(replica_id, replica_count, port, args, params):
     model = DistributedDataParallel(model, device_ids=[replica_id])
     model.params = params
     _train_impl(replica_id, model, dataset, args, params)
+
+

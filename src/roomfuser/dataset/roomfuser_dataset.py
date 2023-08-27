@@ -34,8 +34,8 @@ class RirDataset(Dataset):
         self,
         dataset_path: str,
         n_rir: int = None,
-        cat_labels: bool = True,
         normalize: bool = True,
+        sr=16000,
     ):
         """
         dataset_path: Path to the dataset folder
@@ -46,9 +46,9 @@ class RirDataset(Dataset):
 
         self.dataset_path = dataset_path
         self.n_rir = n_rir
-        self.cat_labels = cat_labels
         self.normalize = normalize
 
+        self.sr = sr
         self.rir_files = sorted(
             [
                 f
@@ -82,20 +82,42 @@ class RirDataset(Dataset):
         # 2. Load conditioner (aka label)
         label_filename = self.rir_files[idx].replace("rir", "label").replace(".wav", ".pt")
         label_path = os.path.join(self.dataset_path, label_filename)
-        conditioner = torch.load(label_path)
+        labels = torch.load(label_path)
 
-        if self.cat_labels:
-            conditioner = torch.cat((
-                conditioner["room_dims"].float(),
-                conditioner["source_pos"].float(),
-                conditioner["mic_pos"].float(),
-                conditioner["rt60"].float()
-            ), dim=0)
-
-        return {"audio": rir, "conditioner": conditioner}
+        conditioner = torch.cat((
+            labels["room_dims"].float(),
+            labels["source_pos"].float(),
+            labels["mic_pos"].float(),
+            labels["rt60"].float()
+        ), dim=0)
 
 
-class RandomRirDataset(Dataset):
+        out = {
+            "audio": rir, "conditioner": conditioner,
+            "labels": labels
+        }
+
+        return out
+
+
+    def decode_conditioner(self, conditioner):
+        if isinstance(conditioner, dict):
+            return conditioner
+        
+        room_dims = conditioner[:3]
+        source_pos = conditioner[3:6]
+        mic_pos = conditioner[6:9]
+        rt60 = conditioner[9:]
+
+        return {
+            "room_dims": room_dims,
+            "source_pos": source_pos,
+            "mic_pos": mic_pos,
+            "rt60": rt60,
+        }
+
+
+class RandomRirDataset(RirDataset):
     """Generate a random room impulse response dataset."""
 
     def __init__(
@@ -106,7 +128,6 @@ class RandomRirDataset(Dataset):
         rt60_range: tuple = (0.2, 1.2),
         absorption_range: tuple = (0.5, 1),
         sr: float = 16000,
-        cat_labels: bool = True,
         backend: str = "auto",
         normalize: bool = True,
     ):
@@ -117,7 +138,6 @@ class RandomRirDataset(Dataset):
         rt60_range: Reverberation time range of the room in seconds
         absorption_range: wall absorption coefficients
         sr: Sample rate of the generated RIRs
-        cat_labels: whether to concatenate labels into a torch tensor or return them as a dict
         """
 
         self.n_rir = n_rir
@@ -126,7 +146,6 @@ class RandomRirDataset(Dataset):
         self.n_samples_per_epoch = n_samples_per_epoch
         self.absorption_range = np.array(absorption_range)
         self.sr = sr
-        self.cat_labels = cat_labels
 
         self.normalize = normalize
 
@@ -135,8 +154,6 @@ class RandomRirDataset(Dataset):
         else:
             self.backend = backend
         
-        super().__init__()
-
     def __len__(self):
         return self.n_samples_per_epoch
 
@@ -155,20 +172,20 @@ class RandomRirDataset(Dataset):
         else:
             raise NotImplementedError("Unknown backend: {}".format(self.backend))
 
-        if self.cat_labels:
-            conditioner = np.concatenate(
-                (room_dims, source_pos, mic_pos, rt60),
-                axis=0
-            )
-            conditioner = torch.from_numpy(conditioner).float()
-        else:
-            conditioner = {
-                "room_dims": torch.from_numpy(room_dims),
-                "rt60": torch.from_numpy(rt60),
-                # "absorption": torch.from_numpy(absorption),
-                "source_pos": torch.from_numpy(source_pos),
-                "mic_pos": torch.from_numpy(mic_pos),
-            }
+
+        conditioner = np.concatenate(
+            (room_dims, source_pos, mic_pos, rt60),
+            axis=0
+        )
+        conditioner = torch.from_numpy(conditioner).float()
+
+        labels = {
+            "room_dims": torch.from_numpy(room_dims),
+            "rt60": torch.from_numpy(rt60),
+            # "absorption": torch.from_numpy(absorption),
+            "source_pos": torch.from_numpy(source_pos),
+            "mic_pos": torch.from_numpy(mic_pos),
+        }
         
         if self.n_rir:
             max_len = min(rir.shape[-1], self.n_rir)
@@ -180,8 +197,11 @@ class RandomRirDataset(Dataset):
             rir = rir / torch.max(torch.abs(rir))
 
 
-        return {"audio": rir, "conditioner": conditioner}
-   
+        out = {"audio": rir, "conditioner": conditioner,
+               "labels": labels}
+
+        return out
+
     def simulate_rir_gpurir(self, room_dims, rt60, absorption, source_pos, mic_pos):
         if rt60 == 0:
             Tdiff = 0.1

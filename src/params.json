@@ -1,14 +1,17 @@
 {
     "batch_size": 16,
     "n_epochs": 200,
-    "n_samples_per_epoch": 100000,
-    "n_log_epochs": 1,
-    "n_workers": 2,
     "learning_rate": 1e-4,
-    "fast_sampling": false,
+    "n_workers": 2,
+    "n_log_epochs": 1,
     "n_viz_samples": 10,
+
+    "n_samples_per_epoch": 10000,
+    "fast_sampling": true,
     "rir_len": 4096,
-    
+    "trim_direct_path": true,
+    "prior_variance_mode": "constant",
+
     "residual_layers": 30,
     "residual_channels": 64,
     "dilation_cycle_length": 10,
@@ -16,9 +19,9 @@
     "dataset_name": "fast_rir",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "gpu_rir_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_pra",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
-    "model_path": "logs/animations/weights-pretrained-envelope.pt",
+    "model_path": "logs/weights-108.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

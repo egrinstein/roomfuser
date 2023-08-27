@@ -5,4 +5,7 @@ submit:
 	@qsub qsub.pbs
 
 viz:
-	@cd src && python visualization.py
+	@cd src && python visualize_backward.py
+
+viz-fwd:
+	@cd src && python visualize_forward.py

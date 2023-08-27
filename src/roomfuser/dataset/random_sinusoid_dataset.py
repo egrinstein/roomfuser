@@ -40,6 +40,7 @@ class RandomSinusoidDataset(Dataset):
             'conditioner': labels,
         }
 
+
 def get_random_sinusoid_config(n_max_cycle=4, n_min_cycle=1, cat=False):
     # Amplitude is uniform in [0.1, 1]
     #amplitude = torch.rand(1) * 0.9 + 0.1
