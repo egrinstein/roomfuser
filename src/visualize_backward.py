@@ -11,7 +11,6 @@ from tqdm import trange
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
-from roomfuser.noise_scheduler import get_prior_variance
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -40,19 +39,19 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
     ax.set_title("Diffusion Process")
 
     line, = ax.plot([], [], lw=2)
+    label = None
+    if isinstance(rt60, torch.Tensor):
+        rt60 = rt60.item()
+    if rt60:
+        label = "RT60={:.2f}".format(rt60)
 
     if target is not None:
-        ax.plot(target, label="Target", alpha=0.5)
-        
+        ax.plot(target, label="Target", alpha=0.5, label=label)
+
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
-        label = None
-        if isinstance(rt60, torch.Tensor):
-            rt60 = rt60.item()
-        if rt60:
-            label = "RT60={:.2f}".format(rt60)
 
-        ax.plot(envelopes.numpy(), label=label.format(rt60))
+        ax.plot(envelopes.numpy())
 
     if target is not None or label is not None:
         ax.legend(loc='upper right')
@@ -87,13 +86,16 @@ def generate_random_rir():
         rir_dataset = FastRirDataset(
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
+            trim_direct_path=params.trim_direct_path,
         )
-    else:
+    elif params.dataset_name == "roomfuser":
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
             n_rir=params.rir_len,
+            trim_direct_path=params.trim_direct_path,
         )
-
+    elif params.dataset_name == "random":
+        pass
     model = DiffWave(params)
     
     model.load_state_dict(params.model_path)
@@ -106,27 +108,18 @@ def generate_random_rir():
     for i in trange(params.n_viz_samples):
         #i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
-        target_audio = d["audio"].numpy()
+        target_audio = d["rir"].numpy()
         conditioner = d["conditioner"]
         target_labels = d["labels"]
-        envelopes = get_prior_variance(
-            params.rir_len,
-            source_pos=target_labels["source_pos"],
-            mic_pos=target_labels["mic_pos"],
-            rt60=target_labels["rt60"],
-            start_at_direct_path= not params.trim_direct_path,
-            mode = params.prior_variance_mode
-
-        )
         
         # Generate audio
-        audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0), envelopes=envelopes,
+        audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0),
                               batch_size=1, fast_sampling=params.fast_sampling, return_steps=True)
         audio = audio[0].numpy()
 
         # Plot diffusion process
 
-        anim = plot_diffusion(audio, target_audio, envelopes=envelopes,
+        anim = plot_diffusion(audio, target_audio,
                               rt60=target_labels["rt60"])
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 

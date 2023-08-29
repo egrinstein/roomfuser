@@ -1,8 +1,10 @@
+# Acoustics-related functions
+
 import numpy as np
 import torch
 
 
-def get_rir_envelope(n_envelope, source_pos, mic_pos, rt60, sr=16000, c=343.0):
+def get_exponential_envelope(n_envelope, rt60, sr=16000):
     """Get Room Impulse Response envelope. The envelope is modeled as a
     decaying exponential which reaches -60 dB (10^(-6)) after rt60 seconds.
     The exponential starts at the time of arrival of the direct path,
@@ -16,7 +18,22 @@ def get_rir_envelope(n_envelope, source_pos, mic_pos, rt60, sr=16000, c=343.0):
         sr (float): Sampling rate.
         rt60 (float): Reverberation time in seconds.
         c (float): Speed of sound in meters per second.
+        start_at_direct_path (bool): If True, the envelope starts at the
+            time of arrival of the direct path. If False, the envelope
+            starts at t=0.
     """
+
+    # Get envelope centered at t=0
+    t_envelope = torch.arange(n_envelope) / sr
+    envelope = torch.exp(-6 * np.log(10) * t_envelope / rt60)
+    
+    return envelope
+
+
+def get_direct_path_idx(labels, sr=16000, c=343):
+    source_pos = labels["source_pos"]
+    mic_pos = labels["mic_pos"]
+
 
     # Get distance between source and microphone
     distance = torch.linalg.norm(source_pos - mic_pos)
@@ -24,13 +41,19 @@ def get_rir_envelope(n_envelope, source_pos, mic_pos, rt60, sr=16000, c=343.0):
     # Get time of arrival of direct path, in samples
     t_direct = distance * sr / c
 
-    # Get envelope centered at t=0
-    t_envelope = torch.arange(n_envelope) / sr
-    # envelope = 0.1 + 0.9*torch.exp(-6 * np.log(10) * t_envelope / rt60)
-    envelope = torch.exp(-6 * np.log(10) * t_envelope / rt60)
-    # Shift envelope to the time of arrival of the direct path
-    envelope = torch.roll(envelope, int(t_direct))
+    return int(t_direct)
 
-    # Zero pad the envelope
-    # envelope = np.pad(envelope, (0, n_envelope - len(envelope)))
-    return envelope
+
+def format_rir(rir, labels, n_rir, trim_direct_path=False):
+    # 1. Trim direct path
+    if trim_direct_path:
+        t = get_direct_path_idx(labels)
+        rir = rir[t:]
+
+    # 4. Pad or truncate RIR
+    if n_rir:
+        max_len = min(rir.shape[-1], n_rir)
+        # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
+        rir = torch.nn.functional.pad(rir, (0, n_rir - max_len))[:n_rir]
+    
+    return rir

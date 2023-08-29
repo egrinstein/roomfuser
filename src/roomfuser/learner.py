@@ -16,6 +16,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from roomfuser.dataset.simulator import RirSimulator
 import torch
 import torch.nn as nn
 
@@ -42,9 +43,16 @@ class DiffWaveLearner:
         self.step = 0
         self.is_master = True
 
+        simulator = None
+        if params.prior_mean_mode == "low_ord_rir":
+            simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
+                            params.trim_direct_path, n_rir=params.rir_len)
+
         self.noise_scheduler = NoiseScheduler(self.params.noise_schedule,
                                               not params.trim_direct_path,
-                                              params.prior_variance_mode)
+                                              params.prior_variance_mode,
+                                              params.prior_mean_mode,
+                                              rir_simulator=simulator)
         self.loss_fn = nn.L1Loss()
         self.summary_writer = None
 
@@ -132,10 +140,9 @@ class DiffWaveLearner:
         for param in self.model.parameters():
             param.grad = None
 
-        audio = batch["audio"]
+        audio = batch["rir"]
         conditioner = batch["conditioner"]
         labels = batch["labels"]
-        envelope = self.noise_scheduler.get_envelope(audio, labels)
 
         batch_size, T = audio.shape
         device = audio.device
@@ -150,7 +157,7 @@ class DiffWaveLearner:
             
             # # 2. Get the corresponding noise for each sample, and add it to the audio.
             noisy_audio, noise = self.noise_scheduler.add_noise_to_audio(
-                audio, t, envelope
+                audio, labels, t,
             )
 
             # 3. Compute the score (gradient of the likelihood) for the noisy audio.
@@ -172,7 +179,7 @@ class DiffWaveLearner:
         writer = self.summary_writer or SummaryWriter(self.model_dir, purge_step=step)
         writer.add_audio(
             "feature/audio",
-            batch["audio"][0],
+            batch["rir"][0],
             step,
             sample_rate=self.params.sample_rate,
         )
@@ -188,9 +195,12 @@ class DiffWaveLearner:
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name in ["roomfuser", "fast_rir"]:
             if self.params.dataset_name == "roomfuser":
-                dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True)
+                dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True,
+                                           trim_direct_path=self.params.trim_direct_path,
+                                           n_order_reflections = self.params.n_order_reflections)
             elif self.params.dataset_name == "fast_rir":
-                dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample)
+                dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
+                                         trim_direct_path=self.params.trim_direct_path)
 
             target_samples = [
                 dataset[i] for i in range(n_viz_samples)
@@ -199,11 +209,11 @@ class DiffWaveLearner:
                 [target_sample["conditioner"] for target_sample in target_samples]
             ).to(model.device)
             audio = torch.stack(
-                [target_sample["audio"] for target_sample in target_samples]
+                [target_sample["rir"] for target_sample in target_samples]
             ).to(model.device)
             labels = [target_sample["labels"] for target_sample in target_samples]
 
-            envelopes = self.noise_scheduler.get_envelope(audio, labels).to(model.device)
+            envelopes = self.noise_scheduler.get_variance(audio, labels).to(model.device)
 
         
         outputs = predict_batch(

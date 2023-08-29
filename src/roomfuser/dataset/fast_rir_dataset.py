@@ -1,5 +1,6 @@
 import os
 import pickle
+from roomfuser.utils import format_rir
 import soundfile as sf
 import torch
 
@@ -60,19 +61,11 @@ class FastRirDataset(Dataset):
         conditioner = self.conditioners[id]
         labels = self.decode_conditioner(conditioner)
 
-        # 3. Trim direct path
-        if self.trim_direct_path:
-            t = get_direct_path_idx(labels)
-            rir = rir[t:]
+        # 3. Format (trim and truncate) RIR
+        rir = format_rir(rir, labels, self.n_rir, self.trim_direct_path)
 
-        # 4. Pad or truncate RIR
-        if self.n_rir:
-            max_len = min(rir.shape[-1], self.n_rir)
-            # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
-            rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
         
-        
-        output = {"audio": rir, "conditioner": conditioner,
+        output = {"rir": rir, "conditioner": conditioner,
                   "labels": labels}
 
         return output
@@ -98,26 +91,12 @@ class FastRirDataset(Dataset):
         conditioner = (conditioner + 1) * 5
         mic_pos = conditioner[:3]
         source_pos = conditioner[3:6]
-        room_dimensions = conditioner[6:9]
+        room_dims = conditioner[6:9]
         rt60 = min(conditioner[9], 0.7) # Don't apply the correction, as the original is unknown.
         # Limit to 0.7 as the original dataset has a maximum of 0.7s for RT60.
         return {
             "mic_pos": mic_pos,
             "source_pos": source_pos,
-            "room_dimensions": room_dimensions,
+            "room_dims": room_dims,
             "rt60": rt60,
         }
-
-
-def get_direct_path_idx(labels, sr=16000, c=343):
-    source_pos = labels["source_pos"]
-    mic_pos = labels["mic_pos"]
-
-
-    # Get distance between source and microphone
-    distance = torch.linalg.norm(source_pos - mic_pos)
-
-    # Get time of arrival of direct path, in samples
-    t_direct = distance * sr / c
-
-    return int(t_direct)

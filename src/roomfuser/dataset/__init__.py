@@ -22,7 +22,8 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from .random_sinusoid_dataset import RandomSinusoidDataset
-from .roomfuser_dataset import RandomRirDataset, RirDataset
+from .roomfuser_dataset import RirDataset
+from .random_rir_dataset import RandomRirDataset
 from .fast_rir_dataset import FastRirDataset
 
 
@@ -34,18 +35,16 @@ class Collator:
 
         output = {}
  
-        output["audio"] = torch.stack([
-            record["audio"] for record in minibatch])
-        
-        if "conditioner" in minibatch[0]:
-            output["conditioner"] = torch.stack(
-                [record["conditioner"] for record in minibatch]
-            )
-        
-        if "labels" in minibatch[0]:
-            output["labels"] = [
-                record["labels"] for record in minibatch
-            ]
+        for key in minibatch[0].keys():
+            if isinstance(minibatch[0][key], torch.Tensor):
+                output[key] = torch.stack([
+                    record[key] for record in minibatch
+                ])
+            elif isinstance(minibatch[0][key], dict):
+                output[key] = [
+                    record[key] for record in minibatch
+                ]
+
         return output
 
 
@@ -58,17 +57,21 @@ def from_path(data_dirs, params, is_distributed=False):
         if os.path.exists(params.roomfuser_dataset_path):
             dataset = RirDataset(
                 params.roomfuser_dataset_path,
-                n_rir=params.rir_len
+                n_rir=params.rir_len,
+                trim_direct_path=params.trim_direct_path,
             )
         else:
             dataset = RandomRirDataset(
                 n_rir=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch,
-                backend=params.rir_backend
+                backend=params.rir_backend,
+                trim_direct_path=params.trim_direct_path,
+                n_order_reflections=params.n_order_reflections
             )
     elif params.dataset_name == "fast_rir":
         dataset = FastRirDataset(
             params.fast_rir_dataset_path,
-            n_rir=params.rir_len
+            n_rir=params.rir_len,
+            trim_direct_path=params.trim_direct_path,
         )
     else:
         raise NotImplementedError(f"Unknown dataset: {params.dataset_name}")

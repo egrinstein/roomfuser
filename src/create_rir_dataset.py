@@ -1,6 +1,6 @@
 from roomfuser.params import params
 
-from roomfuser.dataset.roomfuser_dataset import save_rir_dataset
+from roomfuser.dataset.random_rir_dataset import save_rir_dataset
 
 
 if __name__ == "__main__":
@@ -8,4 +8,5 @@ if __name__ == "__main__":
         params["roomfuser_dataset_path"],
         params["n_samples_per_epoch"],
         sr=params["sample_rate"],
+        n_order_reflections=params["n_order_reflections"],
     )

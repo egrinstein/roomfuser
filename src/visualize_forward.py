@@ -11,7 +11,8 @@ from tqdm import trange
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
-from roomfuser.noise_scheduler import NoiseScheduler, get_prior_variance
+from roomfuser.noise_scheduler import NoiseScheduler
+from roomfuser.dataset.simulator import RirSimulator
 
 
 def plot_diffusion(steps: np.array, target: np.array = None, envelope=None, rt60=None):
@@ -86,11 +87,13 @@ def generate_random_rir():
         rir_dataset = FastRirDataset(
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
+            trim_direct_path=params.trim_direct_path,
         )
     else:
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
             n_rir=params.rir_len,
+            trim_direct_path=params.trim_direct_path,
         )
     
     animations_dir = "logs/animations"
@@ -100,30 +103,25 @@ def generate_random_rir():
     if params.fast_sampling:
         noise_schedule = params.inference_noise_schedule
 
+    simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
+                             params.trim_direct_path, n_rir=params.rir_len)
+
     noise_scheduler = NoiseScheduler(
-        noise_schedule, not params.trim_direct_path, params.prior_variance_mode)
+        noise_schedule, not params.trim_direct_path, params.prior_variance_mode,
+        mean_mode=params.prior_mean_mode,
+        rir_simulator=simulator)
 
     for i in trange(params.n_viz_samples):
         #i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
-        target_audio = d["audio"]
-        conditioner = d["conditioner"]
+        target_audio = d["rir"]
         target_labels = d["labels"]
-        envelopes = get_prior_variance(
-            n_envelope=params.rir_len,
-            source_pos=target_labels["source_pos"],
-            mic_pos=target_labels["mic_pos"],
-            rt60=target_labels["rt60"],
-            start_at_direct_path= not params.trim_direct_path,
-            mode = params.prior_variance_mode
-
-        )
         
         # Generate audio
         noisy_audio = noise_scheduler.get_all_noisy_steps(target_audio.unsqueeze(0),
-                                                          envelope=envelopes.unsqueeze(0))[0]
+                                                          target_labels.unsqueeze(0))[0]
         # Plot diffusion process
-        anim = plot_diffusion(noisy_audio, target_audio, envelopes, rt60=target_labels["rt60"])
+        anim = plot_diffusion(noisy_audio, target_audio, rt60=target_labels["rt60"])
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 
         # Save audio
