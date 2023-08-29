@@ -23,11 +23,13 @@ if BACKEND == "":
 
 
 class RirSimulator:
-    def __init__(self, sr=16000, backend="auto", n_order_reflections=None, trim_direct_path=False, n_rir=None):
+    def __init__(self, sr=16000, backend="auto", n_order_reflections=None, trim_direct_path=False, n_rir=None,
+                 normalize=True):
         self.sr = sr
         self.n_order_reflections = n_order_reflections        
         self.trim_direct_path = trim_direct_path
         self.n_rir = n_rir
+        self.normalize = normalize
 
         if backend == "auto":
             self.backend = BACKEND
@@ -66,6 +68,9 @@ class RirSimulator:
 
         rir = format_rir(rir, config_dict, self.n_rir, self.trim_direct_path)
 
+        if self.normalize:
+            rir = rir / torch.max(torch.abs(rir))
+
         return rir
 
 
@@ -95,7 +100,7 @@ def simulate_rir_gpurir(room_dims, rt60, source_pos, mic_pos, n_order_reflection
     beta = gpuRIR.beta_SabineEstimation(room_dims, rt60, absorption)
     
     if n_order_reflections is not None:
-        nb_img = n_order_reflections
+        nb_img = [n_order_reflections]*3
 
     rir = gpuRIR.simulateRIR(
         room_dims,

@@ -195,9 +195,9 @@ class DiffWaveLearner:
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name in ["roomfuser", "fast_rir"]:
             if self.params.dataset_name == "roomfuser":
-                dataset = RandomRirDataset(n_sample, n_viz_samples, cat_labels=True,
+                dataset = RandomRirDataset(n_sample, n_viz_samples,
                                            trim_direct_path=self.params.trim_direct_path,
-                                           n_order_reflections = self.params.n_order_reflections)
+                                           n_order_reflections = self.params.n_rir_order_reflection)
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
                                          trim_direct_path=self.params.trim_direct_path)
@@ -222,7 +222,7 @@ class DiffWaveLearner:
         )[0]
 
         for i in range(n_viz_samples):
-            axs[i].plot(audio[i].cpu().detach().numpy(), label="Target")
+            axs[i].plot(audio[i].cpu().detach().numpy(), label="Target", alpha=0.5)
             axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted")
             axs[i].legend()
 

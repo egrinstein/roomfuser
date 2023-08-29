@@ -15,7 +15,7 @@ from roomfuser.noise_scheduler import NoiseScheduler
 from roomfuser.dataset.simulator import RirSimulator
 
 
-def plot_diffusion(steps: np.array, target: np.array = None, envelope=None, rt60=None):
+def plot_diffusion(steps: np.array, target, labels, priors: NoiseScheduler = None):
     """Plot the diffusion process.
 
     Args:
@@ -41,21 +41,28 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelope=None, rt60
 
     line, = ax.plot([], [], lw=2)
 
-    if target is not None:
-        ax.plot(target, label="Target", alpha=0.5)
+    label = None
+
+    rt60 = labels[0]["rt60"]
+    if isinstance(rt60, torch.Tensor):
+        rt60 = rt60.item()
+    if rt60:
+        label = "RT60={:.2f}".format(rt60)
+
+    ax.plot(target, label="Target" + label, alpha=0.5)
         
     # Plot the envelope of the RIR based on the RT60
-    label = None
-    if envelope is not None:
-        if isinstance(rt60, torch.Tensor):
-            rt60 = rt60.item()
-        if rt60:
-            label = "RT60={:.2f}".format(rt60)
+    
+    if priors is not None:
+        dummy = torch.zeros(1, steps.shape[1])
+        mean = priors.get_mean(dummy, labels)[0]
+        var = priors.get_variance(dummy, labels)[0]
 
-        ax.plot(envelope.numpy(), label=label)
+        ax.plot(mean, label="Prior Mean", alpha=0.5)
+        ax.plot(var, label="Prior Var.", alpha=0.5)
+       
 
-    if target is not None or label is not None:
-        ax.legend(loc='upper right')
+    ax.legend(loc='upper right')
 
     def init():
         line.set_data([], [])
@@ -119,9 +126,9 @@ def generate_random_rir():
         
         # Generate audio
         noisy_audio = noise_scheduler.get_all_noisy_steps(target_audio.unsqueeze(0),
-                                                          target_labels.unsqueeze(0))[0]
+                                                          [target_labels])[0]
         # Plot diffusion process
-        anim = plot_diffusion(noisy_audio, target_audio, rt60=target_labels["rt60"])
+        anim = plot_diffusion(noisy_audio, target_audio, labels=[target_labels], priors=noise_scheduler)
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 
         # Save audio

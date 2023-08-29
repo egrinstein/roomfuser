@@ -6,6 +6,7 @@ import torch
 from tqdm import tqdm
 
 from roomfuser.dataset.simulator import RirSimulator
+from roomfuser.utils import format_rir
 
 
 class RandomRirDataset(torch.utils.data.Dataset):
@@ -21,6 +22,7 @@ class RandomRirDataset(torch.utils.data.Dataset):
         sr: float = 16000,
         backend: str = "auto",
         normalize: bool = True,
+        trim_direct_path: bool = False,
         n_order_reflections = None
     ):
         """
@@ -38,6 +40,7 @@ class RandomRirDataset(torch.utils.data.Dataset):
         self.n_samples_per_epoch = n_samples_per_epoch
         self.absorption_range = np.array(absorption_range)
         self.sr = sr
+        self.trim_direct_path = trim_direct_path
         self.n_order_reflections = n_order_reflections
 
         self.normalize = normalize
@@ -68,10 +71,7 @@ class RandomRirDataset(torch.utils.data.Dataset):
             torch.Tensor([labels["rt60"]])
         ])
         
-        if self.n_rir:
-            max_len = min(rir.shape[-1], self.n_rir)
-            # Pad with zeros in the end if the RIR is too short, or truncate if it's too long
-            rir = torch.nn.functional.pad(rir, (0, self.n_rir - max_len))[:self.n_rir]
+        rir = format_rir(rir, labels, self.n_rir, self.trim_direct_path)
 
         if self.normalize:
             # Normalize the RIR using the maximum absolute value
