@@ -42,14 +42,10 @@ class RirSimulator:
         device = config_dict[keys[0]].device
         dtype = config_dict[keys[0]].dtype
 
-        for key in keys:
-            if isinstance(config_dict[key], torch.Tensor):
-                config_dict[key] = config_dict[key].cpu().numpy().astype(np.double)
-
-        room_dims = config_dict["room_dims"]
+        room_dims = config_dict["room_dims"].cpu().numpy().astype(np.double)
         rt60 = config_dict["rt60"]
-        source_pos = config_dict["source_pos"]
-        mic_pos = config_dict["mic_pos"]
+        source_pos = config_dict["source_pos"].cpu().numpy().astype(np.double)
+        mic_pos = config_dict["mic_pos"].cpu().numpy().astype(np.double)
 
         if self.backend == "gpuRIR":
             rir = simulate_rir_gpurir(

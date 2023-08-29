@@ -8,5 +8,5 @@ if __name__ == "__main__":
         params["roomfuser_dataset_path"],
         params["n_samples_per_epoch"],
         sr=params["sample_rate"],
-        n_order_reflections=params["n_order_reflections"],
+        n_order_reflections=params["n_rir_order_reflection"],
     )

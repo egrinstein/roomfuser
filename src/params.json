@@ -19,7 +19,7 @@
     "residual_channels": 64,
     "dilation_cycle_length": 10,
     
-    "dataset_name": "fast_rir",
+    "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
     "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_pra",

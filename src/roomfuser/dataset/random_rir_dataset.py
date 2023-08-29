@@ -55,9 +55,9 @@ class RandomRirDataset(torch.utils.data.Dataset):
             self.room_dims_range, self.rt60_range, self.absorption_range
         )
 
-        labels = {
-            torch.from_numpy(v).float() for k, v in labels.items()
-        }
+        for key in labels:
+            if isinstance(labels[key], np.ndarray):
+                labels[key] = torch.from_numpy(labels[key]).float()
 
         rir = self.simulator(labels)
 
@@ -67,8 +67,6 @@ class RandomRirDataset(torch.utils.data.Dataset):
             labels["mic_pos"],
             torch.Tensor([labels["rt60"]])
         ])
-
-        labels["rt60"] = np.array([labels["rt60"]])
         
         if self.n_rir:
             max_len = min(rir.shape[-1], self.n_rir)
@@ -171,11 +169,11 @@ def save_rir_dataset(
 
     for i, d in tqdm(enumerate(dataset), total=len(dataset)):
         audio = d["rir"]
-        conditioner = d["conditioner"]
+        label = d["labels"]
 
         rir_path = os.path.join(dataset_path, f"rir_{i}.wav")
         label_path = os.path.join(dataset_path, f"label_{i}.pt")
 
         sf.write(rir_path, audio, sr)
 
-        torch.save(conditioner, label_path)
+        torch.save(label, label_path)
