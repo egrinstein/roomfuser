@@ -9,3 +9,6 @@ viz:
 
 viz-fwd:
 	@cd src && python visualize_forward.py
+
+dataset:
+	@cd src && python create_rir_dataset.py

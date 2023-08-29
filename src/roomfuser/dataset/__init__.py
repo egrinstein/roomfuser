@@ -65,7 +65,7 @@ def from_path(data_dirs, params, is_distributed=False):
                 n_rir=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch,
                 backend=params.rir_backend,
                 trim_direct_path=params.trim_direct_path,
-                n_order_reflections=params.n_order_reflections
+                n_order_reflections=params.n_rir_order_reflection
             )
     elif params.dataset_name == "fast_rir":
         dataset = FastRirDataset(
