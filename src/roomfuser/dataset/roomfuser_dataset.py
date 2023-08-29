@@ -66,6 +66,9 @@ class RirDataset(Dataset):
         label_path = os.path.join(self.dataset_path, label_filename)
         labels = torch.load(label_path)
 
+        if isinstance(labels["rt60"], torch.Tensor):
+            labels["rt60"] = labels["rt60"].item()
+
         rir = format_rir(rir, labels, self.n_rir, self.trim_direct_path)
 
         conditioner = torch.cat((
@@ -74,7 +77,6 @@ class RirDataset(Dataset):
             labels["mic_pos"].float(),
             torch.Tensor([labels["rt60"]]).float(),
         ), dim=0)
-
 
         out = {
             "rir": rir, "conditioner": conditioner,

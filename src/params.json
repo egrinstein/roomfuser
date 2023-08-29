@@ -22,7 +22,7 @@
     "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_pra",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
     "model_path": "",
 
