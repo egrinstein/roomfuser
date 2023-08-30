@@ -20,9 +20,9 @@ import torch.nn.functional as F
 
 from math import sqrt
 
+from roomfuser.noise_scheduler import NoiseScheduler
+from roomfuser.dataset.simulator import RirSimulator
 
-Linear = nn.Linear
-ConvTranspose2d = nn.ConvTranspose2d
 
 
 def Conv1d(*args, **kwargs):
@@ -42,8 +42,8 @@ class DiffusionEmbedding(nn.Module):
         self.register_buffer(
             "embedding", self._build_embedding(max_steps), persistent=False
         )
-        self.projection1 = Linear(128, 512)
-        self.projection2 = Linear(512, 512)
+        self.projection1 = nn.Linear(128, 512)
+        self.projection2 = nn.Linear(512, 512)
 
     def forward(self, diffusion_step):
         if diffusion_step.dtype in [torch.int32, torch.int64]:
@@ -92,13 +92,13 @@ class ResidualBlock(nn.Module):
             padding=dilation,
             dilation=dilation,
         )
-        self.diffusion_projection = Linear(512, residual_channels)
+        self.diffusion_projection = nn.Linear(512, residual_channels)
 
         self.condition_time_idx = condition_time_idx
         if condition_time_idx:
             n_conditioner += 1
        
-        self.conditioner_projection_fc = Linear(
+        self.conditioner_projection_fc = nn.Linear(
             n_conditioner, 2 * residual_channels
         )
 
@@ -144,7 +144,7 @@ class DiffWave(nn.Module):
         super().__init__()
         self.params = params
         self.input_projection = Conv1d(1, params.residual_channels, 1)
-        self.diffusion_embedding = DiffusionEmbedding(len(params.noise_schedule))
+        self.diffusion_embedding = DiffusionEmbedding(len(params.training_noise_schedule))
 
         self.residual_layers = nn.ModuleList(
             [
@@ -162,8 +162,20 @@ class DiffWave(nn.Module):
         self.output_projection = Conv1d(params.residual_channels, 1, 1)
         nn.init.zeros_(self.output_projection.weight)
 
-
         self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
+
+        # Noise management
+        simulator = None
+        if params.prior_mean_mode == "low_ord_rir":
+            simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
+                            params.trim_direct_path, n_rir=params.rir_len)
+        self.noise_scheduler = NoiseScheduler(
+            params.training_noise_schedule,
+            not params.trim_direct_path,
+            params.prior_variance_mode,
+            params.prior_mean_mode,
+            rir_simulator=simulator
+        )
 
     def forward(self, audio, diffusion_step, conditioner=None):
         x = audio.unsqueeze(1)

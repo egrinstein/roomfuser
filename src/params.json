@@ -9,8 +9,8 @@
     "n_samples_per_epoch": 10000,
     "fast_sampling": true,
     "rir_len": 4096,
-    "trim_direct_path": true,
-    "prior_mean_mode": "low_ord_rir",
+    "trim_direct_path": false,
+    "prior_mean_mode": "constant",
     "prior_variance_mode": "exponential",
     "n_rir_order_reflection": 5,
     "hybrid": true,
@@ -22,7 +22,7 @@
     "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_pra",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
     "model_path": "",
 
@@ -35,7 +35,7 @@
         0.2,
         0.5
     ],
-    "noise_schedule": [
+    "training_noise_schedule": [
         0.0001,
         0.0011183673469387756,
         0.002136734693877551,

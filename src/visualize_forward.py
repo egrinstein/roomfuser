@@ -106,7 +106,7 @@ def generate_random_rir():
     animations_dir = "logs/animations"
     os.makedirs(animations_dir, exist_ok=True)
 
-    noise_schedule = params.noise_schedule
+    noise_schedule = params.training_noise_schedule
     if params.fast_sampling:
         noise_schedule = params.inference_noise_schedule
 

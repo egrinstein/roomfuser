@@ -46,7 +46,7 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
         label = "RT60={:.2f}".format(rt60)
 
     if target is not None:
-        ax.plot(target, label="Target", alpha=0.5, label=label)
+        ax.plot(target, label="Target " + label, alpha=0.5)
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
@@ -114,7 +114,7 @@ def generate_random_rir():
         
         # Generate audio
         audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0),
-                              batch_size=1, fast_sampling=params.fast_sampling, return_steps=True)
+                              batch_size=1, return_steps=True, labels=[target_labels])
         audio = audio[0].numpy()
 
         # Plot diffusion process

@@ -27,7 +27,6 @@ from tqdm import tqdm
 from roomfuser.dataset import from_path, RandomRirDataset, RandomSinusoidDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
-from roomfuser.noise_scheduler import NoiseScheduler
 
 
 class DiffWaveLearner:
@@ -43,16 +42,7 @@ class DiffWaveLearner:
         self.step = 0
         self.is_master = True
 
-        simulator = None
-        if params.prior_mean_mode == "low_ord_rir":
-            simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
-                            params.trim_direct_path, n_rir=params.rir_len)
-
-        self.noise_scheduler = NoiseScheduler(self.params.noise_schedule,
-                                              not params.trim_direct_path,
-                                              params.prior_variance_mode,
-                                              params.prior_mean_mode,
-                                              rir_simulator=simulator)
+        self.noise_scheduler = model.noise_scheduler
         self.loss_fn = nn.L1Loss()
         self.summary_writer = None
 
@@ -152,7 +142,7 @@ class DiffWaveLearner:
             
             # 1. Assign a timestep to each sample in the batch.
             t = torch.randint(
-                0, len(self.params.noise_schedule), [batch_size], device=audio.device
+                0, len(self.params.training_noise_schedule), [batch_size], device=audio.device
             )
             
             # # 2. Get the corresponding noise for each sample, and add it to the audio.
@@ -212,18 +202,15 @@ class DiffWaveLearner:
                 [target_sample["rir"] for target_sample in target_samples]
             ).to(model.device)
             labels = [target_sample["labels"] for target_sample in target_samples]
-
-            envelopes = self.noise_scheduler.get_variance(audio, labels).to(model.device)
-
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            fast_sampling=self.params.fast_sampling, envelopes=envelopes
+            labels=labels
         )[0]
 
         for i in range(n_viz_samples):
             axs[i].plot(audio[i].cpu().detach().numpy(), label="Target", alpha=0.5)
-            axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted")
+            axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted", alpha=0.5)
             axs[i].legend()
 
         # Save the images
