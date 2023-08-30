@@ -52,7 +52,7 @@ class FastRirDataset(Dataset):
             self.scaler = MinMaxScaler(scaler_path)
     
     def __len__(self):
-        return 3000 #len(self.file_names)
+        return len(self.file_names)
     
     def __getitem__(self, idx):
         id = self.file_names[idx]
