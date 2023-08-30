@@ -267,8 +267,8 @@ def train_distributed(replica_id, replica_count, port, args, params):
     device = torch.device("cuda", replica_id)
     torch.cuda.set_device(device)
     model = DiffWave(params).to(device)
+    noise_scheduler = model.noise_scheduler
     model = DistributedDataParallel(model, device_ids=[replica_id])
     model.params = params
+    model.noise_scheduler = noise_scheduler
     _train_impl(replica_id, model, dataset, args, params)
-
-
