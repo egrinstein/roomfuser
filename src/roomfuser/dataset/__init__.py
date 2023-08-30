@@ -13,9 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-import numpy as np
 import os
-import random
 import torch
 
 from torch.utils.data.distributed import DistributedSampler

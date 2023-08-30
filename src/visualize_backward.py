@@ -82,12 +82,14 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
 
 def generate_random_rir():
+    scaler = None
     if params.dataset_name == "fast_rir":
         rir_dataset = FastRirDataset(
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
         )
+        scaler = rir_dataset.scaler
     elif params.dataset_name == "roomfuser":
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
@@ -114,7 +116,8 @@ def generate_random_rir():
         
         # Generate audio
         audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0),
-                              batch_size=1, return_steps=True, labels=[target_labels])
+                              batch_size=1, return_steps=True, labels=[target_labels],
+                              scaler=scaler)
         audio = audio[0].numpy()
 
         # Plot diffusion process

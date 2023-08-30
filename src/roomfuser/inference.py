@@ -17,7 +17,7 @@ import torch
 
 
 def predict_batch(model, conditioner=None, batch_size=1,
-                  return_steps=False, labels=None):
+                  return_steps=False, labels=None, scaler=None):
     
     inference_config = model.noise_scheduler.get_inference_config()
     alpha = inference_config["alpha"]
@@ -55,7 +55,10 @@ def predict_batch(model, conditioner=None, batch_size=1,
                 audio += sigma * noise
             audio = torch.clamp(audio, -1.0, 1.0)
             if return_steps:
-                steps.append(audio)
+                if scaler is not None:
+                    steps.append(scaler.descale(audio))
+                else:
+                    steps.append(audio)
 
     if return_steps:
         audio = torch.stack(steps, dim=1)

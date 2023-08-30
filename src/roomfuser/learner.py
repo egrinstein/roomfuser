@@ -181,6 +181,7 @@ class DiffWaveLearner:
     def _log_output_viz(self, model, n_viz_samples, n_sample, epoch, outputs_dir):
         fig, axs = plt.subplots(nrows=n_viz_samples, ncols=1, figsize=(5, 15))
 
+        scaler = None
         if self.params.dataset_name == "sinusoid": # Debug task
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name in ["roomfuser", "fast_rir"]:
@@ -191,6 +192,7 @@ class DiffWaveLearner:
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
                                          trim_direct_path=self.params.trim_direct_path)
+                scaler = dataset.scaler
 
             target_samples = [
                 dataset[i] for i in range(n_viz_samples)
@@ -205,7 +207,7 @@ class DiffWaveLearner:
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            labels=labels
+            labels=labels, scaler=scaler
         )[0]
 
         for i in range(n_viz_samples):

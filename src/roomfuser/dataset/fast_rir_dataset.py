@@ -6,6 +6,8 @@ import torch
 
 from torch.utils.data import Dataset
 
+from roomfuser.dataset.utils import MinMaxScaler, get_dataset_min_max_scaler
+
 
 class FastRirDataset(Dataset):
     """Room impulse response dataset. Loads RIRs provided by 
@@ -17,6 +19,7 @@ class FastRirDataset(Dataset):
         dataset_path: str,
         n_rir: int = None,
         trim_direct_path: bool = True,
+        scaler_path: str = "",
     ):
         """
         dataset_path: Path to the dataset folder
@@ -43,9 +46,13 @@ class FastRirDataset(Dataset):
             self.conditioners[key] = torch.from_numpy(self.conditioners[key]).float()
 
         super().__init__()
+
+        self.scaler = None
+        if scaler_path != "":
+            self.scaler = MinMaxScaler(scaler_path)
     
     def __len__(self):
-        return len(self.file_names)
+        return 3000 #len(self.file_names)
     
     def __getitem__(self, idx):
         id = self.file_names[idx]
@@ -56,17 +63,19 @@ class FastRirDataset(Dataset):
         # 1. Load RIR
         rir = torch.from_numpy(rir).float()
 
-
         # 2. Load conditioner (aka label)
         conditioner = self.conditioners[id]
         labels = self.decode_conditioner(conditioner)
 
         # 3. Format (trim and truncate) RIR
         rir = format_rir(rir, labels, self.n_rir, self.trim_direct_path)
-
         
         output = {"rir": rir, "conditioner": conditioner,
                   "labels": labels}
+
+        if self.scaler is not None:
+            # Apply min-max scaling
+            output["rir"] = self.scaler.scale(output["rir"])
 
         return output
 
@@ -100,3 +109,14 @@ class FastRirDataset(Dataset):
             "room_dims": room_dims,
             "rt60": rt60,
         }
+
+
+if __name__ == "__main__":
+    from roomfuser.params import params
+    dataset = FastRirDataset(params.fast_rir_dataset_path, n_rir=params.rir_len,
+                             trim_direct_path=params.trim_direct_path)
+
+    scaler = get_dataset_min_max_scaler(dataset)
+    torch.save(scaler, params.fast_rir_scaler_path)
+    print("Saved scaler")
+    print(scaler)

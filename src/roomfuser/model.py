@@ -178,7 +178,9 @@ class DiffWave(nn.Module):
         )
 
     def forward(self, audio, diffusion_step, conditioner=None):
+
         x = audio.unsqueeze(1)
+
         x = self.input_projection(x)
         x = F.relu(x)
 
