@@ -14,9 +14,7 @@
 # ==============================================================================
 
 import matplotlib.pyplot as plt
-import numpy as np
 import os
-from roomfuser.dataset.simulator import RirSimulator
 import torch
 import torch.nn as nn
 
@@ -37,13 +35,14 @@ class DiffWaveLearner:
         self.dataset = dataset
         self.optimizer = optimizer
         self.params = params
+        self.params.loss_weight = self.params.loss_weight
         self.autocast = torch.cuda.amp.autocast(enabled=kwargs.get("fp16", False))
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
         self.step = 0
         self.is_master = True
 
         self.noise_scheduler = model.noise_scheduler
-        self.loss_fn = nn.L1Loss()
+        self.loss_fn = nn.L1Loss(reduction="none")
         self.summary_writer = None
 
     def state_dict(self):
@@ -155,6 +154,7 @@ class DiffWaveLearner:
 
             # 4. Compute the loss.
             loss = self.loss_fn(noise, predicted.squeeze(1))
+            loss = loss.mean()
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
@@ -191,7 +191,8 @@ class DiffWaveLearner:
                                            n_order_reflections = self.params.n_rir_order_reflection)
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
-                                         trim_direct_path=self.params.trim_direct_path)
+                                         trim_direct_path=self.params.trim_direct_path,
+                                         scaler_path=self.params.fast_rir_scaler_path)
                 scaler = dataset.scaler
 
             target_samples = [
@@ -207,10 +208,14 @@ class DiffWaveLearner:
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            labels=labels, scaler=scaler
+            labels=labels
         )[0]
 
         for i in range(n_viz_samples):
+            if scaler is not None:
+                audio[i] = scaler.descale(audio[i])
+                outputs[i] = scaler.descale(outputs[i])
+
             axs[i].plot(audio[i].cpu().detach().numpy(), label="Target", alpha=0.5)
             axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted", alpha=0.5)
             axs[i].legend()

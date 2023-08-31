@@ -70,6 +70,7 @@ def from_path(data_dirs, params, is_distributed=False):
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
+            scaler_path=params.fast_rir_scaler_path,
         )
     else:
         raise NotImplementedError(f"Unknown dataset: {params.dataset_name}")

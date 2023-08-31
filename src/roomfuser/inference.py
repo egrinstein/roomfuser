@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import torch
+from roomfuser.utils import dict_to_device
 
 
 def predict_batch(model, conditioner=None, batch_size=1,
@@ -64,10 +65,3 @@ def predict_batch(model, conditioner=None, batch_size=1,
         audio = torch.stack(steps, dim=1)
 
     return audio, model.params.sample_rate
-
-
-def dict_to_device(d, device):
-    for k, v in d.items():
-        if isinstance(v, torch.Tensor):
-            d[k] = v.to(device)
-    return d

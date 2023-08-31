@@ -6,7 +6,7 @@ import torch
 
 from torch.utils.data import Dataset
 
-from roomfuser.dataset.utils import MinMaxScaler, get_dataset_min_max_scaler
+from roomfuser.utils import MinMaxScaler, get_dataset_min_max_scaler
 
 
 class FastRirDataset(Dataset):

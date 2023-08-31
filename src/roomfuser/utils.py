@@ -3,6 +3,8 @@
 import numpy as np
 import torch
 
+from tqdm import trange
+
 
 def get_exponential_envelope(n_envelope, rt60, sr=16000):
     """Get Room Impulse Response envelope. The envelope is modeled as a
@@ -57,3 +59,51 @@ def format_rir(rir, labels, n_rir, trim_direct_path=False):
         rir = torch.nn.functional.pad(rir, (0, n_rir - max_len))[:n_rir]
     
     return rir
+
+
+# Misc utils
+
+def dict_to_device(d, device):
+    for k, v in d.items():
+        if isinstance(v, torch.Tensor):
+            d[k] = v.to(device)
+    return d
+
+
+class MinMaxScaler:
+    """Class for min-max scaling of data. to the range [-1, 1]."""
+    def __init__(self, path):
+        self.scaler = torch.load(path)
+    
+    def scale(self, data):
+        dict_to_device(self.scaler, data.device)
+        return (data - self.scaler["min"]) / (self.scaler["max"] - self.scaler["min"]) * 2 - 1
+    
+    def descale(self, data):
+        dict_to_device(self.scaler, data.device)
+        return (data + 1) / 2 * (self.scaler["max"] - self.scaler["min"]) + self.scaler["min"]
+
+
+def get_dataset_min_max_scaler(dataset, key="rir"):
+    """Get a scaler for the dataset which scales the data to have zero mean and unit variance.
+
+    Args:
+        dataset (Dataset): Torch dataset where samples contain a field named key.
+    """
+
+    min_vals = None
+    max_vals = None
+
+    n_dataset = len(dataset)
+    for i in trange(n_dataset):
+        sample = dataset[i]
+        data = sample[key]
+        if min_vals is None:
+            min_vals = data
+            max_vals = data
+        else:
+            min_vals = torch.min(min_vals, data)
+            max_vals = torch.max(max_vals, data)
+
+    scaler = {"min": min_vals, "max": max_vals}
+    return scaler
