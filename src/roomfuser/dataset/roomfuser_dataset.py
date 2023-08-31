@@ -4,7 +4,7 @@ import torch
 
 from torch.utils.data import Dataset
 
-from roomfuser.utils import format_rir
+from roomfuser.utils import MinMaxScaler, format_rir, get_dataset_min_max_scaler
 
 
 class RirDataset(Dataset):
@@ -16,9 +16,10 @@ class RirDataset(Dataset):
         self,
         dataset_path: str,
         n_rir: int = None,
-        normalize: bool = True,
+        normalize: bool = False,
         sr=16000,
         trim_direct_path: bool = False,
+        scaler_path: str = "",
     ):
         """
         dataset_path: Path to the dataset folder
@@ -44,6 +45,10 @@ class RirDataset(Dataset):
                 and f.endswith(".wav")
             ]
         )
+
+        self.scaler = None
+        if scaler_path != "":
+            self.scaler = MinMaxScaler(scaler_path)
 
         super().__init__()
     
@@ -83,4 +88,20 @@ class RirDataset(Dataset):
             "labels": labels
         }
 
+        if self.scaler is not None:
+            # Apply min-max scaling
+            out["rir"] = self.scaler.scale(out["rir"])
+
+
         return out
+
+
+if __name__ == "__main__":
+    from roomfuser.params import params
+    dataset = RirDataset(params.roomfuser_dataset_path, n_rir=params.rir_len,
+                         trim_direct_path=params.trim_direct_path)
+
+    scaler = get_dataset_min_max_scaler(dataset)
+    torch.save(scaler, params.roomfuser_scaler_path)
+    print("Saved scaler")
+    print(scaler)

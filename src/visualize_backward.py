@@ -96,6 +96,7 @@ def generate_random_rir():
             params.roomfuser_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
+            scaler_path=params.roomfuser_scaler_path,
         )
     elif params.dataset_name == "random":
         pass

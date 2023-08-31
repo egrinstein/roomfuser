@@ -1,12 +1,12 @@
 import os
 import pickle
-from roomfuser.utils import format_rir
 import soundfile as sf
 import torch
 
 from torch.utils.data import Dataset
 
 from roomfuser.utils import MinMaxScaler, get_dataset_min_max_scaler
+from roomfuser.utils import format_rir
 
 
 class FastRirDataset(Dataset):

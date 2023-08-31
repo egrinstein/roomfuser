@@ -95,12 +95,14 @@ def generate_random_rir():
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
+            scaler_path=params.fast_rir_scaler_path,
         )
     else:
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
+            scaler_path=params.roomfuser_scaler_path,
         )
     
     animations_dir = "logs/animations"

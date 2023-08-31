@@ -57,6 +57,7 @@ def from_path(data_dirs, params, is_distributed=False):
                 params.roomfuser_dataset_path,
                 n_rir=params.rir_len,
                 trim_direct_path=params.trim_direct_path,
+                scaler_path=params.roomfuser_scaler_path,
             )
         else:
             dataset = RandomRirDataset(

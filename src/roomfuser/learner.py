@@ -15,6 +15,7 @@
 
 import matplotlib.pyplot as plt
 import os
+from roomfuser.dataset.roomfuser_dataset import RirDataset
 import torch
 import torch.nn as nn
 
@@ -186,9 +187,10 @@ class DiffWaveLearner:
             dataset = RandomSinusoidDataset(n_sample, n_viz_samples)
         elif self.params.dataset_name in ["roomfuser", "fast_rir"]:
             if self.params.dataset_name == "roomfuser":
-                dataset = RandomRirDataset(n_sample, n_viz_samples,
-                                           trim_direct_path=self.params.trim_direct_path,
-                                           n_order_reflections = self.params.n_rir_order_reflection)
+                dataset = RirDataset(self.params.roomfuser_dataset_path, n_sample,
+                                     trim_direct_path=self.params.trim_direct_path,
+                                     scaler_path=self.params.roomfuser_scaler_path)
+                scaler = dataset.scaler
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
                                          trim_direct_path=self.params.trim_direct_path,

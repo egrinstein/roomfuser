@@ -66,7 +66,7 @@ def format_rir(rir, labels, n_rir, trim_direct_path=False):
 def dict_to_device(d, device):
     for k, v in d.items():
         if isinstance(v, torch.Tensor):
-            d[k] = v.to(device)
+            d[k] = v.to(device, dtype=torch.float32)
     return d
 
 

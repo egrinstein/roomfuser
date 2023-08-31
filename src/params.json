@@ -1,7 +1,7 @@
 {
     "batch_size": 16,
     "n_epochs": 200,
-    "learning_rate": 1e-4,
+    "learning_rate": 5e-5,
     "n_workers": 2,
     "n_log_epochs": 1,
     "n_viz_samples": 10,
@@ -20,12 +20,13 @@
     "residual_channels": 64,
     "dilation_cycle_length": 10,
     
-    "dataset_name": "fast_rir",
+    "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_pra",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
     "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
+    "roomfuser_scaler_path": "/Users/ezajlerg/datasets/rir_dataset/scaler_trimmed.pt",
     "model_path": "",
 
     "max_grad_norm": null,
