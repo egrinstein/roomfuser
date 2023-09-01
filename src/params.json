@@ -2,7 +2,7 @@
     "batch_size": 16,
     "n_epochs": 200,
     "learning_rate": 5e-5,
-    "n_workers": 2,
+    "n_workers": 0,
     "n_log_epochs": 1,
     "n_viz_samples": 10,
 
@@ -12,7 +12,7 @@
     "trim_direct_path": true,
     "prior_mean_mode": "constant",
     "prior_variance_mode": "constant",
-    "n_rir_order_reflection": 5,
+    "n_rir_order_reflection": null,
     "loss_weight": "log",
 
     "residual_layers": 30,
@@ -22,7 +22,7 @@
     "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset_rt60",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
     "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
     "roomfuser_scaler_path": "roomfuser_scaler_trimmed.pt",

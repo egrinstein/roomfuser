@@ -23,7 +23,9 @@ class RandomRirDataset(torch.utils.data.Dataset):
         backend: str = "auto",
         normalize: bool = True,
         trim_direct_path: bool = False,
-        n_order_reflections = None
+        n_order_reflections = None,
+        mic_pos=None,
+        source_pos=None,
     ):
         """
         n_rir: Size of each dataset sample
@@ -44,6 +46,9 @@ class RandomRirDataset(torch.utils.data.Dataset):
         self.n_order_reflections = n_order_reflections
 
         self.normalize = normalize
+
+        self.mic_pos = mic_pos
+        self.source_pos = source_pos
 
         self.simulator = RirSimulator(self.sr, backend=backend, n_order_reflections=self.n_order_reflections)
 
@@ -87,19 +92,34 @@ class RandomRirDataset(torch.utils.data.Dataset):
 def get_random_room_config(
     room_dims_range: tuple = ((3, 10), (3, 10), (2, 4)),
     rt60_range: tuple = (0.2, 1.2),
-    absorption_range: tuple = (0.5, 1), cat=False
+    absorption_range: tuple = (0.5, 1),
+    mic_pos=None, source_pos=None,
+    cat=False
     ):    
     # 1. Generate random room
-    room_dims = np.array([
-        np.random.uniform(*room_dims_range[i])
-        for i in range(len(room_dims_range))
-    ])
+
+    if isinstance(room_dims_range[0], tuple):
+        room_dims = np.array([
+            np.random.uniform(*room_dims_range[i])
+            for i in range(len(room_dims_range))
+        ])
+    else:
+        # If the room_dims_range is not a tuple of tuples, then it is an array.
+        room_dims = np.array(room_dims_range)
 
     rt60 = np.array([np.random.uniform(*rt60_range)])
     
     # 2. Generate random source and mic positions
-    source_pos = np.random.uniform(0, 1, 3) * room_dims
-    mic_pos = np.random.uniform(0, 1, 3) * room_dims
+    if mic_pos is not None:
+        mic_pos = np.array(mic_pos)
+    else:
+        mic_pos = np.random.uniform(0, 1, 3) * room_dims
+    
+    if source_pos is not None:
+        source_pos = np.array(source_pos)
+    else:
+        source_pos = np.random.uniform(0, 1, 3) * room_dims
+
     # 2.1. Make sure the mic is not too close to the source
     while np.linalg.norm(mic_pos - source_pos) < 0.3 * np.linalg.norm(room_dims):
         mic_pos = np.random.uniform(0, 1, 3) * room_dims
@@ -130,7 +150,9 @@ def save_rir_dataset(
     sr: float = 16000,
     backend: str = "auto",
     n_order_reflections = None,
-    c=343):
+    c=343,
+    mic_pos=None,
+    source_pos=None,):
     """Save a random room impulse response dataset to disk.
 
     params:
@@ -145,7 +167,12 @@ def save_rir_dataset(
         c: Speed of sound in m/s
     """
 
-    max_room = np.array([r[1] for r in room_dims_range])
+    if isinstance(room_dims_range[0], tuple):
+        max_room = np.array([r[1] for r in room_dims_range])
+    else:
+        # If the room_dims_range is not a tuple of tuples, then it is an array.
+        max_room = np.array(room_dims_range)
+
     max_room_diag = np.linalg.norm(max_room)
 
     n_rir = rt60_range[-1] + max_room_diag/c
@@ -162,7 +189,9 @@ def save_rir_dataset(
         sr=sr,
         backend=backend,
         normalize=False,
-        n_order_reflections=n_order_reflections
+        n_order_reflections=n_order_reflections,
+        mic_pos=mic_pos,
+        source_pos=source_pos,
     )
 
     os.makedirs(dataset_path, exist_ok=True) 
@@ -177,3 +206,5 @@ def save_rir_dataset(
         sf.write(rir_path, audio, sr)
 
         torch.save(label, label_path)
+    
+    print(f"Dataset saved to {dataset_path}")

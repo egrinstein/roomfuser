@@ -60,7 +60,7 @@ class RirDataset(Dataset):
         rir, sr = sf.read(rir_path)
 
         # 1. Load RIR
-        rir = torch.from_numpy(rir).float()
+        rir = torch.from_numpy(rir)
         if self.normalize:
             # Normalize the RIR using the maximum absolute value
             rir = rir / torch.max(torch.abs(rir))
