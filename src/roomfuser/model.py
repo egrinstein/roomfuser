@@ -169,12 +169,15 @@ class DiffWave(nn.Module):
         if params.prior_mean_mode == "low_ord_rir":
             simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
                             params.trim_direct_path, n_rir=params.rir_len)
+        
+        inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None
         self.noise_scheduler = NoiseScheduler(
             params.training_noise_schedule,
             not params.trim_direct_path,
             params.prior_variance_mode,
             params.prior_mean_mode,
-            rir_simulator=simulator
+            rir_simulator=simulator,
+            inference_noise_schedule=inference_noise_schedule
         )
 
     def forward(self, audio, diffusion_step, conditioner=None):

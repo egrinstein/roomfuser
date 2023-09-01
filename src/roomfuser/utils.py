@@ -77,11 +77,19 @@ class MinMaxScaler:
     
     def scale(self, data):
         dict_to_device(self.scaler, data.device)
-        return (data - self.scaler["min"]) / (self.scaler["max"] - self.scaler["min"]) * 2 - 1
+        # Scale to [0, 1]
+        scaled = (data - self.scaler["min"]) / (self.scaler["max"] - self.scaler["min"])
+        # Scale to [-1, 1]
+        scaled = scaled * 2 - 1
+        return scaled
     
     def descale(self, data):
         dict_to_device(self.scaler, data.device)
-        return (data + 1) / 2 * (self.scaler["max"] - self.scaler["min"]) + self.scaler["min"]
+        # Scale to [0, 1]
+        descaled = (data + 1) / 2
+        # Scale to [min, max]
+        descaled = descaled * (self.scaler["max"] - self.scaler["min"]) + self.scaler["min"]
+        return descaled
 
 
 def get_dataset_min_max_scaler(dataset, key="rir"):

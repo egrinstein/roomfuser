@@ -109,16 +109,15 @@ def generate_random_rir():
     os.makedirs(animations_dir, exist_ok=True)
 
     noise_schedule = params.training_noise_schedule
-    if params.fast_sampling:
-        noise_schedule = params.inference_noise_schedule
 
     simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
                              params.trim_direct_path, n_rir=params.rir_len)
 
+    inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None
     noise_scheduler = NoiseScheduler(
         noise_schedule, not params.trim_direct_path, params.prior_variance_mode,
         mean_mode=params.prior_mean_mode,
-        rir_simulator=simulator)
+        rir_simulator=simulator, inference_noise_schedule=inference_noise_schedule)
 
     for i in trange(params.n_viz_samples):
         #i = np.random.randint(len(rir_dataset))

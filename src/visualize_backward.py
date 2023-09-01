@@ -50,7 +50,6 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
-
         ax.plot(envelopes.numpy())
 
     if target is not None or label is not None:
@@ -82,7 +81,6 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
 
 def generate_random_rir():
-    scaler = None
     if params.dataset_name == "fast_rir":
         rir_dataset = FastRirDataset(
             params.fast_rir_dataset_path,
@@ -90,7 +88,6 @@ def generate_random_rir():
             trim_direct_path=params.trim_direct_path,
             scaler_path=params.fast_rir_scaler_path,
         )
-        scaler = rir_dataset.scaler
     elif params.dataset_name == "roomfuser":
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
@@ -98,8 +95,8 @@ def generate_random_rir():
             trim_direct_path=params.trim_direct_path,
             scaler_path=params.roomfuser_scaler_path,
         )
-    elif params.dataset_name == "random":
-        pass
+    scaler = rir_dataset.scaler
+
     model = DiffWave(params)
     
     model.load_state_dict(params.model_path)
@@ -112,7 +109,7 @@ def generate_random_rir():
     for i in trange(params.n_viz_samples):
         #i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
-        target_audio = d["rir"].numpy()
+        target_audio = d["rir"]
         conditioner = d["conditioner"]
         target_labels = d["labels"]
         
@@ -121,7 +118,9 @@ def generate_random_rir():
                               batch_size=1, return_steps=True, labels=[target_labels],
                               scaler=scaler)
         audio = audio[0].numpy()
-
+        if scaler is not None:
+            target_audio = scaler.descale(target_audio)
+        target_audio = target_audio.numpy()
         # Plot diffusion process
 
         anim = plot_diffusion(audio, target_audio,

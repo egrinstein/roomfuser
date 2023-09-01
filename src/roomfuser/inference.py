@@ -14,11 +14,11 @@
 # ==============================================================================
 
 import torch
-from roomfuser.utils import dict_to_device
+from roomfuser.utils import MinMaxScaler, dict_to_device
 
 
 def predict_batch(model, conditioner=None, batch_size=1,
-                  return_steps=False, labels=None, scaler=None):
+                  return_steps=False, labels=None, scaler: MinMaxScaler=None):
     
     inference_config = model.noise_scheduler.get_inference_config()
     alpha = inference_config["alpha"]

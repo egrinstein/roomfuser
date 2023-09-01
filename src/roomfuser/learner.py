@@ -36,7 +36,6 @@ class DiffWaveLearner:
         self.dataset = dataset
         self.optimizer = optimizer
         self.params = params
-        self.params.loss_weight = self.params.loss_weight
         self.autocast = torch.cuda.amp.autocast(enabled=kwargs.get("fp16", False))
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
         self.step = 0
@@ -46,6 +45,18 @@ class DiffWaveLearner:
         self.loss_fn = nn.L1Loss(reduction="none")
         self.summary_writer = None
 
+        loss_weight = self.params.loss_weight
+        if loss_weight == "constant":
+            loss_weight = torch.ones(self.params.rir_len, device=self.model.device)/self.params.rir_len
+        elif loss_weight == "linear":
+            loss_weight = torch.linspace(1, 0, self.params.rir_len, device=self.model.device)
+        elif loss_weight == "log":
+            loss_weight = torch.linspace(self.params.rir_len, 1, self.params.rir_len, device=self.model.device)
+            loss_weight = torch.log(loss_weight)
+        
+        # Normalize the loss weight
+        self.loss_weight = loss_weight/loss_weight.sum()
+        
     def state_dict(self):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
             model_state = self.model.module.state_dict()
@@ -67,12 +78,9 @@ class DiffWaveLearner:
 
     def load_state_dict(self, state_dict):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
-            self.model.module.load_state_dict(state_dict["model"], strict=False)
+            self.model.module.load_state_dict(state_dict["model"])#, strict=False)
         else:
             self.model.load_state_dict(state_dict["model"])
-        # self.optimizer.load_state_dict(state_dict["optimizer"])
-        # self.scaler.load_state_dict(state_dict["scaler"])
-        # self.step = state_dict["step"]
 
     def save_to_checkpoint(self, n_epoch, filename="weights"):
         save_basename = f"{filename}-{n_epoch}.pt"
@@ -155,7 +163,8 @@ class DiffWaveLearner:
 
             # 4. Compute the loss.
             loss = self.loss_fn(noise, predicted.squeeze(1))
-            loss = loss.mean()
+            loss = (loss*self.loss_weight).sum()
+            loss = loss / batch_size
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
