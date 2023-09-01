@@ -48,7 +48,10 @@ class RirDataset(Dataset):
 
         self.scaler = None
         if scaler_path != "":
+            print("Loaded scaler")
             self.scaler = MinMaxScaler(scaler_path)
+        else:
+            print("Scaler not used")
 
         super().__init__()
     

@@ -29,6 +29,7 @@ def _get_free_port():
 
 
 def main(args):
+    print(params)
     replica_count = device_count()
     if replica_count > 1:
         if params.batch_size % replica_count != 0:

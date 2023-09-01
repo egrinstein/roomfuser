@@ -23,10 +23,10 @@
     "dataset_name": "roomfuser",
     "n_conditioner": 10,
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "roomfuser_dataset_path": "/rds/general/user/ezajlerg/home/datasets/rir_dataset",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
     "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
-    "roomfuser_scaler_path": "/Users/ezajlerg/datasets/rir_dataset/scaler_trimmed.pt",
+    "roomfuser_scaler_path": "/rds/general/user/ezajlerg/home/src/roomfuser/src/roomfuser_scaler_trimmed.pt",
     "model_path": "",
 
     "max_grad_norm": null,
