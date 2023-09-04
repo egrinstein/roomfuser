@@ -36,3 +36,4 @@ params = AttrDict()
 
 with open('params.json') as f:
   params.override(json.load(f))
+

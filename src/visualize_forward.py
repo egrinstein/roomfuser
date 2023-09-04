@@ -103,6 +103,7 @@ def generate_random_rir():
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
             scaler_path=params.roomfuser_scaler_path,
+            frequency_response=params.frequency_response,
         )
     
     animations_dir = "logs/animations"
@@ -117,7 +118,8 @@ def generate_random_rir():
     noise_scheduler = NoiseScheduler(
         noise_schedule, not params.trim_direct_path, params.prior_variance_mode,
         mean_mode=params.prior_mean_mode,
-        rir_simulator=simulator, inference_noise_schedule=inference_noise_schedule)
+        rir_simulator=simulator, inference_noise_schedule=inference_noise_schedule,
+        frequency_response=params.frequency_response)
 
     for i in trange(params.n_viz_samples):
         #i = np.random.randint(len(rir_dataset))

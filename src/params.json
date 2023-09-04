@@ -13,7 +13,8 @@
     "prior_mean_mode": "constant",
     "prior_variance_mode": "constant",
     "n_rir_order_reflection": null,
-    "loss_weight": "log",
+    "loss_weight": null,
+    "frequency_response": true,
 
     "residual_layers": 30,
     "residual_channels": 64,

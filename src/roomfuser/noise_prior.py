@@ -4,12 +4,17 @@ from roomfuser.utils import get_exponential_envelope
 
 class NoisePrior:
     def __init__(self, start_at_direct_path, variance_mode="exponential",
-                 mean_mode="constant", rir_simulator=None, n_rir=None, batch_size=None):
+                 mean_mode="constant", rir_simulator=None, n_rir=None, batch_size=None,
+                 frequency_response=False):
         self.start_at_direct_path = start_at_direct_path
         self.variance_mode = variance_mode
         self.mean_mode = mean_mode
-        self.n_rir = n_rir
         self.batch_size = batch_size
+        self.frequency_response = frequency_response
+
+        self.n_rir = n_rir
+        if n_rir and frequency_response:
+            self.n_rir = n_rir//2 + 1
 
         if mean_mode == "low_ord_rir":
             if rir_simulator is None:
@@ -31,6 +36,9 @@ class NoisePrior:
         else:
             noise = torch.randn_like(audio)
         
+        if self.frequency_response: # Prior mean and variance are not computed in the frequency domain
+            return noise
+
         # Compute prior mean and variance of the noise
         variance = self.get_variance(labels, audio)
         mean = self.get_mean(labels, audio)

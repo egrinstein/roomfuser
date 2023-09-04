@@ -143,7 +143,9 @@ class DiffWave(nn.Module):
     def __init__(self, params):
         super().__init__()
         self.params = params
-        self.input_projection = Conv1d(1, params.residual_channels, 1)
+
+        sig_channels = 2 if params.frequency_response else 1
+        self.input_projection = Conv1d(sig_channels, params.residual_channels, 1)
         self.diffusion_embedding = DiffusionEmbedding(len(params.training_noise_schedule))
 
         self.residual_layers = nn.ModuleList(
@@ -159,7 +161,7 @@ class DiffWave(nn.Module):
         self.skip_projection = Conv1d(
             params.residual_channels, params.residual_channels, 1
         )
-        self.output_projection = Conv1d(params.residual_channels, 1, 1)
+        self.output_projection = Conv1d(params.residual_channels, sig_channels, 1)
         nn.init.zeros_(self.output_projection.weight)
 
         self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
@@ -177,12 +179,14 @@ class DiffWave(nn.Module):
             params.prior_variance_mode,
             params.prior_mean_mode,
             rir_simulator=simulator,
-            inference_noise_schedule=inference_noise_schedule
+            inference_noise_schedule=inference_noise_schedule,
+            frequency_response=params.frequency_response
         )
 
-    def forward(self, audio, diffusion_step, conditioner=None):
-
-        x = audio.unsqueeze(1)
+    def forward(self, x, diffusion_step, conditioner=None):
+        x_shape = x.shape
+        if len(x_shape) == 2:
+            x = x.unsqueeze(1)
 
         x = self.input_projection(x)
         x = F.relu(x)

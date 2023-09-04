@@ -7,7 +7,7 @@ from roomfuser.noise_prior import NoisePrior
 class NoiseScheduler:
     def __init__(self, beta, start_at_direct_path, variance_mode="exponential",
                  mean_mode="constant", rir_simulator=None, n_rir=None, batch_size=None,
-                inference_noise_schedule=None):
+                inference_noise_schedule=None, frequency_response=False):
         
         self.noise_prior = NoisePrior(
             start_at_direct_path=start_at_direct_path,
@@ -16,6 +16,7 @@ class NoiseScheduler:
             rir_simulator=rir_simulator,
             n_rir=n_rir,
             batch_size=batch_size,
+            frequency_response=frequency_response
         )
 
         self.beta = beta = np.array(beta)
@@ -39,9 +40,11 @@ class NoiseScheduler:
     def add_noise_to_audio(self, audio, labels, timestamp):
         # 1. Get the base noise
         noise = self.get_base_noise(audio, labels)
-
+        
         # 2. Get the corresponding noise for each sample, and add it to the audio.
         noise_scale = self.noise_level[timestamp].unsqueeze(1)
+        if len(audio.shape) == 3:
+            noise_scale = noise_scale.unsqueeze(2)
         noise_scale_sqrt = noise_scale**0.5
         noisy_audio = noise_scale_sqrt * audio + (1.0 - noise_scale) ** 0.5 * noise
 

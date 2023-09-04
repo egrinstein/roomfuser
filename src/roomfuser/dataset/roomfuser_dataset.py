@@ -20,6 +20,7 @@ class RirDataset(Dataset):
         sr=16000,
         trim_direct_path: bool = False,
         scaler_path: str = "",
+        frequency_response=False,
     ):
         """
         dataset_path: Path to the dataset folder
@@ -34,6 +35,8 @@ class RirDataset(Dataset):
 
         self.sr = sr
         self.trim_direct_path = trim_direct_path
+
+        self.frequency_response = frequency_response
 
         self
         self.rir_files = sorted(
@@ -61,10 +64,6 @@ class RirDataset(Dataset):
 
         # 1. Load RIR
         rir = torch.from_numpy(rir).float()
-        if self.normalize:
-            # Normalize the RIR using the maximum absolute value
-            rir = rir / torch.max(torch.abs(rir))
-        
 
         # 2. Load conditioner (aka label)
         label_filename = self.rir_files[idx].replace("rir", "label").replace(".wav", ".pt")
@@ -92,6 +91,20 @@ class RirDataset(Dataset):
             # Apply min-max scaling
             out["rir"] = self.scaler.scale(out["rir"])
 
+        if self.frequency_response:
+            # Compute the frequency response
+            out["rir"] = torch.fft.rfft(out["rir"])
+
+            if self.normalize:
+                # Normalize the RIR using the magnitude
+                out["rir"] = out["rir"] / torch.max(torch.abs(out["rir"]))
+            
+            # Convert complex to 2 channels
+            out["rir"] = torch.stack((out["rir"].real, out["rir"].imag), dim=0)
+        else:
+            if self.normalize:
+                # Normalize the RIR using the maximum absolute value
+                out["rir"] = out["rir"] / torch.max(torch.abs(out["rir"]))
 
         return out
 

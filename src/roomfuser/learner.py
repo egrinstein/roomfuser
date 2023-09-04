@@ -23,7 +23,7 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from roomfuser.dataset import from_path, RandomRirDataset, RandomSinusoidDataset, FastRirDataset
+from roomfuser.dataset import from_path, RandomSinusoidDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
@@ -42,21 +42,9 @@ class DiffWaveLearner:
         self.is_master = True
 
         self.noise_scheduler = model.noise_scheduler
-        self.loss_fn = nn.L1Loss(reduction="none")
+        self.loss_fn = Loss(params.rir_len, model.device, params.loss_weight)
         self.summary_writer = None
 
-        loss_weight = self.params.loss_weight
-        if loss_weight == "constant":
-            loss_weight = torch.ones(self.params.rir_len, device=self.model.device)/self.params.rir_len
-        elif loss_weight == "linear":
-            loss_weight = torch.linspace(1, 0, self.params.rir_len, device=self.model.device)
-        elif loss_weight == "log":
-            loss_weight = torch.linspace(self.params.rir_len, 1, self.params.rir_len, device=self.model.device)
-            loss_weight = torch.log(loss_weight)
-        
-        # Normalize the loss weight
-        self.loss_weight = loss_weight/loss_weight.sum()
-        
     def state_dict(self):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
             model_state = self.model.module.state_dict()
@@ -120,7 +108,7 @@ class DiffWaveLearner:
 
             if self.is_master:
                 if n_epoch % self.params.n_log_epochs == 0:
-                    self._write_summary(n_epoch, batch, loss)
+                    # self._write_summary(n_epoch, batch, loss)
                     self._log_output_viz(
                         self.model,
                         self.params.n_viz_samples,
@@ -142,7 +130,13 @@ class DiffWaveLearner:
         conditioner = batch["conditioner"]
         labels = batch["labels"]
 
-        batch_size, T = audio.shape
+        audio_shape = audio.shape
+        if len(audio_shape) == 2:
+            batch_size, T = audio.shape
+        else:
+            # Frequency response
+            batch_size, _, T = audio.shape
+
         device = audio.device
         self.noise_scheduler.noise_level = self.noise_scheduler.noise_level.to(device)
 
@@ -162,9 +156,7 @@ class DiffWaveLearner:
             predicted = self.model(noisy_audio, t, conditioner)
 
             # 4. Compute the loss.
-            loss = self.loss_fn(noise, predicted.squeeze(1))
-            loss = (loss*self.loss_weight).sum()
-            loss = loss / batch_size
+            loss = self.loss_fn(noise, predicted)
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
@@ -198,7 +190,8 @@ class DiffWaveLearner:
             if self.params.dataset_name == "roomfuser":
                 dataset = RirDataset(self.params.roomfuser_dataset_path, n_sample,
                                      trim_direct_path=self.params.trim_direct_path,
-                                     scaler_path=self.params.roomfuser_scaler_path)
+                                     scaler_path=self.params.roomfuser_scaler_path,
+                                     frequency_response=self.params.frequency_response)
                 scaler = dataset.scaler
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
@@ -219,15 +212,21 @@ class DiffWaveLearner:
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            labels=labels
+            labels=labels, frequency_response=self.params.frequency_response
         )[0]
 
         for i in range(n_viz_samples):
             if scaler is not None:
                 audio[i] = scaler.descale(audio[i])
-                outputs[i] = scaler.descale(outputs[i])
 
-            axs[i].plot(audio[i].cpu().detach().numpy(), label="Target", alpha=0.5)
+            if self.params.frequency_response:
+                # In this case, this model is using the frequency response: apply the IDFT to get the audio back
+                target = torch.complex(audio[i, 0], audio[i, 1])
+                target = torch.fft.irfft(target)
+            else:
+                target = audio[i]
+
+            axs[i].plot(target.cpu().detach().numpy(), label="Target", alpha=0.5)
             axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted", alpha=0.5)
             axs[i].legend()
 
@@ -290,3 +289,36 @@ def train_distributed(replica_id, replica_count, port, args, params):
     model.params = params
     model.noise_scheduler = noise_scheduler
     _train_impl(replica_id, model, dataset, args, params)
+
+
+class Loss(nn.Module):
+    def __init__(self, rir_len, device, loss_weight=None):
+        super().__init__()
+        self.device = device
+    
+        if loss_weight == "linear":
+            loss_weight = torch.linspace(1, 0, rir_len, device=device)
+        elif loss_weight == "log":
+            loss_weight = torch.linspace(rir_len, 1, rir_len, device=device)
+            loss_weight = torch.log(loss_weight)
+        
+        # Normalize the loss weight
+        if loss_weight is not None:
+            loss_weight = loss_weight/loss_weight.sum()
+
+        self.loss_weight = loss_weight
+
+        self.loss_fn = nn.L1Loss(reduction="none")
+
+    def forward(self, noise, predicted):
+        batch_size = noise.shape[0]
+
+        loss = self.loss_fn(noise, predicted.squeeze(1))
+
+        if self.loss_weight is not None:
+            loss = (loss*self.loss_weight).sum()
+            loss = loss / batch_size
+        else:
+            loss = loss.mean()
+
+        return loss
