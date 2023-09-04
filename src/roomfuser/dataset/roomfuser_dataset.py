@@ -61,8 +61,7 @@ class RirDataset(Dataset):
     
     def __getitem__(self, idx):
 
-        # Count time it takes to load the RIR
-        start = time.time()
+        #start = time.time()
         rir_path = os.path.join(self.dataset_path, self.rir_files[idx])
         rir, sr = sf.read(rir_path)
 
@@ -110,8 +109,8 @@ class RirDataset(Dataset):
                 # Normalize the RIR using the maximum absolute value
                 out["rir"] = out["rir"] / torch.max(torch.abs(out["rir"]))
 
-        end = time.time()
-        print(f"Loading RIR took {end - start} seconds")
+        # end = time.time()
+        # print(f"Loading RIR took {end - start} seconds")
         return out
 
 
