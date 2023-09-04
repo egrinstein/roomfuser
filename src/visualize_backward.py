@@ -117,10 +117,15 @@ def generate_random_rir():
         # Generate audio
         audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0),
                               batch_size=1, return_steps=True, labels=[target_labels],
-                              scaler=scaler)
+                              scaler=scaler, frequency_response=params.frequency_response)
         audio = audio[0].numpy()
         if scaler is not None:
             target_audio = scaler.descale(target_audio)
+        if params.frequency_response:
+            target_audio = torch.complex(target_audio[0], target_audio[1])
+            target_audio = torch.fft.irfft(target_audio)
+
+        target_audio /= torch.max(torch.abs(target_audio))
         target_audio = target_audio.numpy()
         # Plot diffusion process
 

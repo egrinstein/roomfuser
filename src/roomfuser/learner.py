@@ -234,6 +234,7 @@ class DiffWaveLearner:
         os.makedirs(outputs_dir, exist_ok=True)
         plt.tight_layout()
         plt.savefig(f"{outputs_dir}/{epoch:04d}.png")
+        plt.close()
 
 
 def _train_impl(replica_id, model, dataset, args, params):

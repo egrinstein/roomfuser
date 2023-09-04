@@ -32,7 +32,6 @@ def predict_batch(model, conditioner=None, batch_size=1,
         audio_shape = (batch_size, model.params.rir_len)
     else:
         audio_shape = (batch_size, 2, model.params.rir_len // 2 + 1)
-        
 
     with torch.no_grad():
         if labels is not None:
@@ -45,7 +44,7 @@ def predict_batch(model, conditioner=None, batch_size=1,
         audio = model.noise_scheduler.get_base_noise(audio, labels)
 
         if return_steps:
-            steps = [audio]
+            steps = [] #[audio]
 
         for n in range(len(alpha) - 1, -1, -1):
             c1 = 1 / alpha[n] ** 0.5
@@ -74,7 +73,10 @@ def predict_batch(model, conditioner=None, batch_size=1,
                 out = torch.fft.irfft(out)
             
             if scaler is not None:
-                steps.append(scaler.descale(out))
+                out = scaler.descale(out)
+            
+            out = out / torch.max(torch.abs(out), dim=1, keepdim=True)[0]
+            # out = torch.clamp(out, -1.0, 1.0)
 
             if return_steps:
                 steps.append(out)
