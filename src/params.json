@@ -19,6 +19,7 @@
     "residual_layers": 30,
     "residual_channels": 64,
     "dilation_cycle_length": 10,
+    "n_conditioner_layers": 2,
     
     "dataset_name": "roomfuser",
     "n_conditioner": 10,

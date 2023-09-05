@@ -78,6 +78,7 @@ class ResidualBlock(nn.Module):
         residual_channels,
         dilation,
         condition_time_idx=True,
+        n_conditioner_layers=1,
     ):
         """
         :param n_conditioner: size of conditioner
@@ -98,9 +99,23 @@ class ResidualBlock(nn.Module):
         if condition_time_idx:
             n_conditioner += 1
        
-        self.conditioner_projection_fc = nn.Linear(
-            n_conditioner, 2 * residual_channels
-        )
+        if n_conditioner_layers == 1:
+            self.conditioner_projection_fc = nn.Linear(
+                n_conditioner, 2 * residual_channels
+            )
+        else:
+            self.conditioner_projection_fc = []
+            for i in range(n_conditioner_layers):
+                if i == 0:
+                    self.conditioner_projection_fc.append(
+                        nn.Linear(n_conditioner, 2 * residual_channels))
+                else:
+                    self.conditioner_projection_fc.append(
+                        nn.Linear(2 * residual_channels, 2 * residual_channels))
+                
+                if i < n_conditioner_layers - 1:
+                    self.conditioner_projection_fc.append(nn.ReLU())
+            self.conditioner_projection_fc = nn.Sequential(*self.conditioner_projection_fc)
 
         self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
 
@@ -154,6 +169,7 @@ class DiffWave(nn.Module):
                     params.n_conditioner,
                     params.residual_channels,
                     2 ** (i % params.dilation_cycle_length),
+                    n_conditioner_layers=params.n_conditioner_layers,
                 )
                 for i in range(params.residual_layers)
             ]
@@ -207,7 +223,7 @@ class DiffWave(nn.Module):
         x = self.output_projection(x)
         return x
 
-    def load_state_dict(self, path, strict=False):
+    def load_state_dict(self, path, strict=True):
         if isinstance(path, str):
             model_params = torch.load(path, map_location="cpu")["model"]
         else:
