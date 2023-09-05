@@ -77,7 +77,7 @@ class ResidualBlock(nn.Module):
         n_conditioner,
         residual_channels,
         dilation,
-        condition_time_idx=True,
+        condition_time_idx=False,
         n_conditioner_layers=1,
     ):
         """

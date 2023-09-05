@@ -38,7 +38,6 @@ class DiffWaveLearner:
         self.params = params
         self.autocast = torch.cuda.amp.autocast(enabled=kwargs.get("fp16", False))
         self.scaler = torch.cuda.amp.GradScaler(enabled=kwargs.get("fp16", False))
-        self.step = 0
         self.is_master = True
 
         self.noise_scheduler = model.noise_scheduler
@@ -51,7 +50,6 @@ class DiffWaveLearner:
         else:
             model_state = self.model.state_dict()
         return {
-            "step": self.step,
             "model": {
                 k: v.cpu() if isinstance(v, torch.Tensor) else v
                 for k, v in model_state.items()
@@ -91,19 +89,18 @@ class DiffWaveLearner:
         for n_epoch in range(self.params.n_epochs):
             progress_bar = tqdm(total=len(self.dataset))
             progress_bar.set_description(f"Epoch: {n_epoch}")
-            epoch_loss = 0.0
-            for batch in self.dataset:
+            epoch_loss = 0.0 # Moving average
+            for n_batch, batch in enumerate(self.dataset):
                 batch = _nested_map(
                     batch,
                     lambda x: x.to(torch.float32).to(device) if isinstance(x, torch.Tensor) else x,
                 )
                 loss = self.train_step(batch)
                 if torch.isnan(loss).any():
-                    raise RuntimeError(f"Detected NaN loss at step {self.step}.")
-                self.step += 1
+                    raise RuntimeError(f"Detected NaN loss at epoch {n_epoch}.")
                 progress_bar.update(1)
-                progress_bar.set_postfix(loss=loss.item())
-                epoch_loss += loss.item()/len(self.dataset)
+                epoch_loss = (epoch_loss*n_batch + loss.item())/(n_batch + 1)
+                progress_bar.set_postfix(loss=epoch_loss)
             progress_bar.close()
 
             if self.is_master:
