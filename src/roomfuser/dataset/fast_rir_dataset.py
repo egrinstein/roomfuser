@@ -20,6 +20,7 @@ class FastRirDataset(Dataset):
         n_rir: int = None,
         trim_direct_path: bool = True,
         scaler_path: str = "",
+        frequency_response=False,
     ):
         """
         dataset_path: Path to the dataset folder
@@ -50,6 +51,8 @@ class FastRirDataset(Dataset):
         self.scaler = None
         if scaler_path != "":
             self.scaler = MinMaxScaler(scaler_path)
+
+        self.frequency_response = frequency_response
     
     def __len__(self):
         return len(self.file_names)
@@ -70,14 +73,24 @@ class FastRirDataset(Dataset):
         # 3. Format (trim and truncate) RIR
         rir = format_rir(rir, labels, self.n_rir, self.trim_direct_path)
         
-        output = {"rir": rir, "conditioner": conditioner,
+        out = {"rir": rir, "conditioner": conditioner,
                   "labels": labels}
 
         if self.scaler is not None:
             # Apply min-max scaling
-            output["rir"] = self.scaler.scale(output["rir"])
+            out["rir"] = self.scaler.scale(out["rir"])
 
-        return output
+        if self.frequency_response:
+            # Compute the frequency response
+            out["rir"] = torch.fft.rfft(out["rir"])
+
+            # Normalize the RIR using the magnitude
+            out["rir"] = out["rir"] / torch.max(torch.abs(out["rir"]))
+            
+            # Convert complex to 2 channels
+            out["rir"] = torch.stack((out["rir"].real, out["rir"].imag), dim=0)
+
+        return out
 
     def decode_conditioner(self, conditioner):
         """According to https://github.com/anton-jeran/FAST-RIR:

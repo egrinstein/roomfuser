@@ -57,7 +57,7 @@ class RirDataset(Dataset):
         super().__init__()
     
     def __len__(self):
-        return len(self.rir_files)
+        return 100 #len(self.rir_files)
     
     def __getitem__(self, idx):
 
@@ -109,8 +109,6 @@ class RirDataset(Dataset):
                 # Normalize the RIR using the maximum absolute value
                 out["rir"] = out["rir"] / torch.max(torch.abs(out["rir"]))
 
-        # end = time.time()
-        # print(f"Loading RIR took {end - start} seconds")
         return out
 
 

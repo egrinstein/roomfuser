@@ -87,6 +87,7 @@ def generate_random_rir():
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
             scaler_path=params.fast_rir_scaler_path,
+            frequency_response=params.frequency_response,
         )
     elif params.dataset_name == "roomfuser":
         rir_dataset = RirDataset(

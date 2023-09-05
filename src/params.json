@@ -21,7 +21,7 @@
     "dilation_cycle_length": 10,
     "n_conditioner_layers": 2,
     
-    "dataset_name": "roomfuser",
+    "dataset_name": "fast_rir",
     "n_conditioner": 10,
     "sample_rate": 16000,
     "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",

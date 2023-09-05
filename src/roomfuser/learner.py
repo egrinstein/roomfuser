@@ -196,7 +196,8 @@ class DiffWaveLearner:
             elif self.params.dataset_name == "fast_rir":
                 dataset = FastRirDataset(self.params.fast_rir_dataset_path, n_sample,
                                          trim_direct_path=self.params.trim_direct_path,
-                                         scaler_path=self.params.fast_rir_scaler_path)
+                                         scaler_path=self.params.fast_rir_scaler_path,
+                                         frequency_response=self.params.frequency_response)
                 scaler = dataset.scaler
 
             target_samples = [
@@ -225,6 +226,8 @@ class DiffWaveLearner:
                 target = torch.fft.irfft(target)
             else:
                 target = audio[i]
+
+            target = target / torch.max(torch.abs(target))
 
             axs[i].plot(target.cpu().detach().numpy(), label="Target", alpha=0.5)
             axs[i].plot(outputs[i].cpu().detach().numpy(), label="Predicted", alpha=0.5)
