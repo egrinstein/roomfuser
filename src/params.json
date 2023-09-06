@@ -26,9 +26,10 @@
     "sample_rate": 16000,
     "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
     "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
-    "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
+    "fast_rir_gan_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir_gan",
+    "fast_rir_scaler_path": "",
     "roomfuser_scaler_path": "",
-    "model_path": "",
+    "model_path": "logs/fr-fast-rir.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [
