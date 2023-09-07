@@ -159,6 +159,16 @@ class NoiseScheduler:
             beta = beta[1:]
             beta = np.clip(beta, 0, 0.999)
 
+            # Min-max normalize to the range beta_config["start"] to beta_config["end"]
+            beta_max = max(beta)
+            beta_min = min(beta)
+            beta = (beta - beta_min) / (beta_max - beta_min)
+            beta = beta * (beta_config["end"] - beta_config["start"]) + beta_config["start"]
+
+            # import matplotlib.pyplot as plt
+            # plt.plot(beta)
+            # plt.show()
+
         else:
             raise ValueError("Unknown beta type: {}".format(beta_config["type"]))
 

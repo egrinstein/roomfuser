@@ -7,7 +7,7 @@
     "n_viz_samples": 10,
 
     "n_samples_per_epoch": 10000,
-    "fast_sampling": true,
+    "fast_sampling": false,
     "rir_len": 4096,
     "trim_direct_path": true,
     "prior_mean_mode": "constant",
@@ -29,7 +29,7 @@
     "fast_rir_gan_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir_gan",
     "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
     "roomfuser_scaler_path": "",
-    "model_path": "/Users/ezajlerg/src/roomfuser/src/logs/weights-112.pt",
+    "model_path": "/Users/ezajlerg/src/roomfuser/src/logs/weights-2.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [
@@ -44,7 +44,7 @@
         "type": "linear",
         "start": 0.0001,
         "end": 0.05,
-        "steps": 50
+        "steps": 200
     },
     "rir_backend": "auto"
 }
