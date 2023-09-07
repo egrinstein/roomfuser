@@ -159,9 +159,10 @@ class DiffWave(nn.Module):
         super().__init__()
         self.params = params
 
+        self._init_noise_manager(params)
+
         sig_channels = 2 if params.frequency_response else 1
         self.input_projection = Conv1d(sig_channels, params.residual_channels, 1)
-        self.diffusion_embedding = DiffusionEmbedding(len(params.training_noise_schedule))
 
         self.residual_layers = nn.ModuleList(
             [
@@ -182,12 +183,15 @@ class DiffWave(nn.Module):
 
         self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
 
-        # Noise management
+    def _init_noise_manager(self, params):
+        "Initialize the noise manager, which handles the noise schedule and noise prior."
+
         simulator = None
         if params.prior_mean_mode == "low_ord_rir":
             simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
                             params.trim_direct_path, n_rir=params.rir_len)
-        
+
+
         inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None
         self.noise_scheduler = NoiseScheduler(
             params.training_noise_schedule,
@@ -198,6 +202,7 @@ class DiffWave(nn.Module):
             inference_noise_schedule=inference_noise_schedule,
             frequency_response=params.frequency_response
         )
+        self.diffusion_embedding = DiffusionEmbedding(len(self.noise_scheduler.beta))
 
     def forward(self, x, diffusion_step, conditioner=None):
         x_shape = x.shape

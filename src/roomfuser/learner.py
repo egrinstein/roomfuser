@@ -141,7 +141,7 @@ class DiffWaveLearner:
             
             # 1. Assign a timestep to each sample in the batch.
             t = torch.randint(
-                0, len(self.params.training_noise_schedule), [batch_size], device=audio.device
+                0, len(self.noise_scheduler.beta), [batch_size], device=audio.device
             )
             
             # # 2. Get the corresponding noise for each sample, and add it to the audio.

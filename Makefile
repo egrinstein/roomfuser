@@ -18,3 +18,6 @@ dataset:
 
 activate:
 	@conda activate roomfuser
+
+nohup:
+	@nohup cd src && python3 -m roomfuser logs . > out.log &

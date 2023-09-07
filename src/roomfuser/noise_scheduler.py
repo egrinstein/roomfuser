@@ -5,9 +5,18 @@ from roomfuser.noise_prior import NoisePrior
 
 
 class NoiseScheduler:
-    def __init__(self, beta, start_at_direct_path, variance_mode="exponential",
+    def __init__(self, beta_config, start_at_direct_path, variance_mode="exponential",
                  mean_mode="constant", rir_simulator=None, n_rir=None, batch_size=None,
                 inference_noise_schedule=None, frequency_response=False):
+        """beta_config is a dict as in the example:
+
+        {
+            "type": "linear",
+            "start": 0.0001,
+            "end": 0.05,
+            "steps": 100
+        }
+        """
         
         self.noise_prior = NoisePrior(
             start_at_direct_path=start_at_direct_path,
@@ -19,7 +28,7 @@ class NoiseScheduler:
             frequency_response=frequency_response
         )
 
-        self.beta = beta = np.array(beta)
+        self.beta = beta = self.get_beta(beta_config)
         self.noise_level = np.cumprod(1 - beta)
         self.noise_level = torch.tensor(self.noise_level.astype(np.float32))
 
@@ -109,3 +118,48 @@ class NoiseScheduler:
             "beta": beta,
             "T": T,
         }
+
+    def get_beta(self, beta_config):
+        if beta_config["type"] == "linear":
+            beta = np.linspace(
+                beta_config["start"], beta_config["end"], beta_config["steps"]
+            )
+        elif beta_config["type"] == "exponential":
+            beta = np.exp(
+                np.linspace(
+                    np.log(beta_config["start"]),
+                    np.log(beta_config["end"]),
+                    beta_config["steps"],
+                )
+            )
+        elif beta_config["type"] == "cosine":
+            # https://arxiv.org/pdf/2102.09672.pdf Nichol and Dhariwal
+            # Show that a "cosine schedule" is better than a linear schedule.
+            # Some phrases from the paper:
+            # "the end of the forward noising process is too noisy, and so doesn't contribute
+            # very much to sample quality"
+
+            # The schedule is defined in terms of alpha_cum, which is equal to:
+
+            T = beta_config["steps"]
+            s = 0.008 # Offset
+
+            def f(t):
+                return np.cos((t/T + s)/(1 + s) * np.pi/2)**2
+            
+            f_0 = f(0)
+
+            def f_alpha_cum(t):
+                return f(t) / f_0 
+
+            alpha_cum_t = np.array([f_alpha_cum(t) for t in range(T + 1)])
+            alpha_cum_t_minus_1 = np.array([f_alpha_cum(t-1) for t in range(T + 1)])
+            beta = 1 - (alpha_cum_t/alpha_cum_t_minus_1)
+
+            beta = beta[1:]
+            beta = np.clip(beta, 0, 0.999)
+
+        else:
+            raise ValueError("Unknown beta type: {}".format(beta_config["type"]))
+
+        return beta

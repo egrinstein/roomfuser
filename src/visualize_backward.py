@@ -14,6 +14,7 @@ from roomfuser.dataset import RirDataset, FastRirDataset
 from roomfuser.model import DiffWave
 from roomfuser.inference import predict_batch
 
+
 def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr: int = 16000, rt60=None):
     """Plot the diffusion process.
 
@@ -46,7 +47,8 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
         label = "RT60={:.2f}".format(rt60)
 
     if target is not None:
-        ax.plot(target, label="Target " + label, alpha=0.5)
+        mse = np.mean((target - steps[-1])**2)
+        ax.plot(target, label=f"MSE={mse} " + label, alpha=0.5)
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
@@ -109,7 +111,7 @@ def generate_random_rir():
     os.makedirs(animations_dir, exist_ok=True)
 
     for i in trange(params.n_viz_samples):
-        #i = np.random.randint(len(rir_dataset))
+        # i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
         target_audio = d["rir"]
         conditioner = d["conditioner"]

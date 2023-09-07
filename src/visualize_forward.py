@@ -110,11 +110,10 @@ def generate_random_rir():
     animations_dir = "logs/animations"
     os.makedirs(animations_dir, exist_ok=True)
 
-    noise_schedule = params.training_noise_schedule
-
     simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
                              params.trim_direct_path, n_rir=params.rir_len)
 
+    noise_schedule = params.training_noise_schedule
     inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None
     noise_scheduler = NoiseScheduler(
         noise_schedule, not params.trim_direct_path, params.prior_variance_mode,
