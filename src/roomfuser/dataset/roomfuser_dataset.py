@@ -57,7 +57,7 @@ class RirDataset(Dataset):
         super().__init__()
     
     def __len__(self):
-        return 100 #len(self.rir_files)
+        return len(self.rir_files)//10
     
     def __getitem__(self, idx):
 

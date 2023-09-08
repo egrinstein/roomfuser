@@ -95,9 +95,19 @@ class ResidualBlock(nn.Module):
         )
         self.diffusion_projection = nn.Linear(512, residual_channels)
 
+        self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
+
+        self._init_cond_layer(n_conditioner, condition_time_idx)
+
+
+    def _init_cond_layer(self, n_conditioner, condition_time_idx):
         self.condition_time_idx = condition_time_idx
         if condition_time_idx:
             n_conditioner += 1
+        
+        if n_conditioner == 0:
+            self.conditioner_projection_fc = None
+            return
        
         if n_conditioner_layers == 1:
             self.conditioner_projection_fc = nn.Linear(
@@ -117,12 +127,7 @@ class ResidualBlock(nn.Module):
                     self.conditioner_projection_fc.append(nn.ReLU())
             self.conditioner_projection_fc = nn.Sequential(*self.conditioner_projection_fc)
 
-        self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
-
     def forward(self, x, diffusion_step, conditioner=None):
-        assert (conditioner is None and self.conditioner_projection_fc is None) or (
-            conditioner is not None and self.conditioner_projection_fc is not None
-        )
 
         diffusion_step = self.diffusion_projection(diffusion_step).unsqueeze(-1)
         y = x + diffusion_step
@@ -181,7 +186,8 @@ class DiffWave(nn.Module):
         self.output_projection = Conv1d(params.residual_channels, sig_channels, 1)
         nn.init.zeros_(self.output_projection.weight)
 
-        self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
+        if params.n_conditioner > 0:
+            self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
 
     def _init_noise_manager(self, params):
         "Initialize the noise manager, which handles the noise schedule and noise prior."
@@ -214,6 +220,8 @@ class DiffWave(nn.Module):
 
         diffusion_step = self.diffusion_embedding(diffusion_step)
 
+        if self.params.n_conditioner == 0:
+            conditioner = None
         if conditioner is not None:
             conditioner = self.cond_norm(conditioner)
 

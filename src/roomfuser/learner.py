@@ -64,7 +64,7 @@ class DiffWaveLearner:
 
     def load_state_dict(self, state_dict):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
-            self.model.module.load_state_dict(state_dict["model"])#, strict=False)
+            self.model.module.load_state_dict(state_dict["model"], strict=False)
         else:
             self.model.load_state_dict(state_dict["model"])
 
@@ -286,7 +286,7 @@ def train_distributed(replica_id, replica_count, port, args, params):
     torch.cuda.set_device(device)
     model = DiffWave(params).to(device)
     noise_scheduler = model.noise_scheduler
-    model = DistributedDataParallel(model, device_ids=[replica_id])
+    model = DistributedDataParallel(model, device_ids=[replica_id], find_unused_parameters=False)
     model.params = params
     model.noise_scheduler = noise_scheduler
     _train_impl(replica_id, model, dataset, args, params)

@@ -55,7 +55,7 @@ class FastRirDataset(Dataset):
         self.frequency_response = frequency_response
     
     def __len__(self):
-        return len(self.file_names)//10
+        return len(self.file_names)
     
     def __getitem__(self, idx):
         id = self.file_names[idx]

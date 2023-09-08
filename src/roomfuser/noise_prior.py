@@ -95,7 +95,7 @@ class NoisePrior:
 
 def get_prior_variance(
         n_rir, source_pos, mic_pos, rt60, sr=16000, c=343.0,
-        start_at_direct_path=True, mode="exponential"):
+        start_at_direct_path=True, mode="exponential", min_variance=0.1, scale=5):
     """Get prior for the room impulse response.
     Args:
         n_envelope (int): Number of samples in the envelope.
@@ -131,5 +131,8 @@ def get_prior_variance(
         envelope = torch.roll(envelope, int(t_direct))
         # Zero pad the envelope
         envelope = torch.nn.functional.pad(envelope, (0, n_rir - len(envelope)))
+
+    envelope += min_variance
+    envelope *= scale
 
     return envelope
