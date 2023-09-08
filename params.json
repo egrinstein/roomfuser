@@ -6,6 +6,7 @@
     "n_log_epochs": 1,
     "n_viz_samples": 10,
 
+    "model": "unet1d",
     "n_samples_per_epoch": 10000,
     "fast_sampling": false,
     "rir_len": 4096,
@@ -24,10 +25,10 @@
     "n_conditioner": 0,
     "dataset_name": "roomfuser",
     "sample_rate": 16000,
-    "roomfuser_dataset_path": "/home/e_grinstein/datasets/rir_dataset",
-    "fast_rir_dataset_path": "/home/e_grinstein/datasets/fast_rir/Medium_Room/",
-    "fast_rir_gan_dataset_path": "/home/e_grinstein/src/FAST-RIR/code_new/Generated_RIRs/",
-    "fast_rir_scaler_path": "/home/e_grinstein/datasets/fast_rir/Medium_Room/scaler_trimmed.pt",
+    "roomfuser_dataset_path": "/Users/ezajlerg/datasets/rir_dataset",
+    "fast_rir_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room",
+    "fast_rir_gan_dataset_path": "/Users/ezajlerg/datasets/third_party/fastrir_gan",
+    "fast_rir_scaler_path": "/Users/ezajlerg/datasets/third_party/fastrir/Medium_Room/scaler_trimmed.pt",
     "roomfuser_scaler_path": "",
     "model_path": "",
 
@@ -43,8 +44,8 @@
     "training_noise_schedule":{
         "type": "linear",
         "start": 0.0001,
-        "end": 0.02,
-        "steps": 200
+        "end": 0.05,
+        "steps": 50
     },
     "rir_backend": "auto"
 }

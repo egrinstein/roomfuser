@@ -46,7 +46,7 @@ class Collator:
         return output
 
 
-def from_path(data_dirs, params, is_distributed=False):
+def from_path(params, is_distributed=False):
     if params.dataset_name == "sinusoid":
         dataset = RandomSinusoidDataset(
             n_sample=params.rir_len, n_samples_per_epoch=params.n_samples_per_epoch

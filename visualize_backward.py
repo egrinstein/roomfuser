@@ -11,7 +11,7 @@ from tqdm import trange
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
-from roomfuser.model import DiffWave
+from roomfuser.models.diffwave import DiffWave
 from roomfuser.inference import predict_batch
 
 

@@ -24,11 +24,13 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from roomfuser.dataset import from_path, RandomSinusoidDataset, FastRirDataset
-from roomfuser.model import DiffWave
+from roomfuser.models.diffwave import DiffWave
+from roomfuser.models.unet1d import Unet1D
+
 from roomfuser.inference import predict_batch
 
 
-class DiffWaveLearner:
+class Trainer:
     def __init__(self, model_dir, model, dataset, optimizer, params, *args, **kwargs):
         os.makedirs(model_dir, exist_ok=True)
         self.model_dir = model_dir
@@ -241,7 +243,7 @@ def _train_impl(replica_id, model, dataset, args, params):
     torch.backends.cudnn.benchmark = True
     opt = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
 
-    learner = DiffWaveLearner(
+    learner = Trainer(
         args.model_dir, model, dataset, opt, params, fp16=args.fp16
     )
     learner.is_master = replica_id == 0
@@ -260,8 +262,15 @@ def _nested_map(struct, map_fn):
 
 
 def train(args, params):
-    dataset = from_path(args.data_dirs, params)
-    model = DiffWave(params)
+    dataset = from_path(params)
+
+    if params.model == "unet1d":
+        model = Unet1D(params)
+    elif params.model == "diffwave":
+        model = DiffWave(params)
+    else:
+        raise ValueError(f"Unknown model: {params.model}. Please choose between 'unet1d' and 'diffwave'")
+
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -281,7 +290,7 @@ def train_distributed(replica_id, replica_count, port, args, params):
         "nccl", rank=replica_id, world_size=replica_count
     )
 
-    dataset = from_path(args.data_dirs, params, is_distributed=True)
+    dataset = from_path(params, is_distributed=True)
     device = torch.device("cuda", replica_id)
     torch.cuda.set_device(device)
     model = DiffWave(params).to(device)

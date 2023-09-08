@@ -13,16 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from math import sqrt
 
-from roomfuser.noise_scheduler import NoiseScheduler
-from roomfuser.dataset.simulator import RirSimulator
-
+from roomfuser.models.base_model import BaseModel
 
 
 def Conv1d(*args, **kwargs):
@@ -97,10 +94,12 @@ class ResidualBlock(nn.Module):
 
         self.output_projection = Conv1d(residual_channels, 2 * residual_channels, 1)
 
-        self._init_cond_layer(n_conditioner, condition_time_idx)
+        self._init_cond_layer(n_conditioner, condition_time_idx, 
+                              n_conditioner_layers, residual_channels)
 
 
-    def _init_cond_layer(self, n_conditioner, condition_time_idx):
+    def _init_cond_layer(self, n_conditioner, condition_time_idx,
+                         n_conditioner_layers, residual_channels):
         self.condition_time_idx = condition_time_idx
         if condition_time_idx:
             n_conditioner += 1
@@ -159,12 +158,12 @@ class ResidualBlock(nn.Module):
         return (x + residual) / sqrt(2.0), skip
 
 
-class DiffWave(nn.Module):
+class DiffWave(BaseModel):
     def __init__(self, params):
-        super().__init__()
+        super().__init__(params)
         self.params = params
 
-        self._init_noise_manager(params)
+        self.diffusion_embedding = DiffusionEmbedding(len(self.noise_scheduler.beta))
 
         sig_channels = 2 if params.frequency_response else 1
         self.input_projection = Conv1d(sig_channels, params.residual_channels, 1)
@@ -188,27 +187,6 @@ class DiffWave(nn.Module):
 
         if params.n_conditioner > 0:
             self.cond_norm = nn.BatchNorm1d(params.n_conditioner)
-
-    def _init_noise_manager(self, params):
-        "Initialize the noise manager, which handles the noise schedule and noise prior."
-
-        simulator = None
-        if params.prior_mean_mode == "low_ord_rir":
-            simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
-                            params.trim_direct_path, n_rir=params.rir_len)
-
-
-        inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None
-        self.noise_scheduler = NoiseScheduler(
-            params.training_noise_schedule,
-            not params.trim_direct_path,
-            params.prior_variance_mode,
-            params.prior_mean_mode,
-            rir_simulator=simulator,
-            inference_noise_schedule=inference_noise_schedule,
-            frequency_response=params.frequency_response
-        )
-        self.diffusion_embedding = DiffusionEmbedding(len(self.noise_scheduler.beta))
 
     def forward(self, x, diffusion_step, conditioner=None):
         x_shape = x.shape
