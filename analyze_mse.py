@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
-from roomfuser.models.diffwave import DiffWave
+from roomfuser.models import load_model
 from roomfuser.inference import predict_batch
 
 
@@ -36,7 +36,7 @@ def analyze_mse():
     scaler = rir_dataset.scaler
 
     # Load model
-    model = DiffWave(params)
+    model = load_model(params)
     model.load_state_dict(params.model_path)
     model.device = torch.device("cpu")
     model.eval()

@@ -19,7 +19,7 @@ class RirDataset(Dataset):
         n_rir: int = None,
         normalize: bool = True,
         sr=16000,
-        trim_direct_path: bool = False,
+        trim_direct_path: bool = True,
         scaler_path: str = "",
         frequency_response=False,
     ):
@@ -57,7 +57,7 @@ class RirDataset(Dataset):
         super().__init__()
     
     def __len__(self):
-        return len(self.rir_files)//10
+        return len(self.rir_files)#//10
     
     def __getitem__(self, idx):
 

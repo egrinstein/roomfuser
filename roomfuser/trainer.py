@@ -21,11 +21,11 @@ import torch.nn as nn
 
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
+from torchinfo import summary
 from tqdm import tqdm
 
 from roomfuser.dataset import from_path, RandomSinusoidDataset, FastRirDataset
-from roomfuser.models.diffwave import DiffWave
-from roomfuser.models.unet1d import Unet1D
+from roomfuser.models import load_model
 
 from roomfuser.inference import predict_batch
 
@@ -66,7 +66,7 @@ class Trainer:
 
     def load_state_dict(self, state_dict):
         if hasattr(self.model, "module") and isinstance(self.model.module, nn.Module):
-            self.model.module.load_state_dict(state_dict["model"], strict=False)
+            self.model.module.load_state_dict(state_dict["model"])#, strict=False)
         else:
             self.model.load_state_dict(state_dict["model"])
 
@@ -74,6 +74,7 @@ class Trainer:
         save_basename = f"{filename}-{n_epoch}.pt"
         save_name = f"{self.model_dir}/{save_basename}"
         torch.save(self.state_dict(), save_name)
+        print(f"Saved best model at {save_name}")
 
     def restore_from_checkpoint(self):
         model_path = self.params.model_path
@@ -102,7 +103,7 @@ class Trainer:
                     raise RuntimeError(f"Detected NaN loss at epoch {n_epoch}.")
                 progress_bar.update(1)
                 epoch_loss = (epoch_loss*n_batch + loss.item())/(n_batch + 1)
-                progress_bar.set_postfix(loss=epoch_loss)
+                progress_bar.set_postfix(loss=epoch_loss)#**(1/2))
             progress_bar.close()
 
             if self.is_master:
@@ -118,7 +119,6 @@ class Trainer:
             # Save the model if it's the best one so far
             if self.is_master and epoch_loss < best_loss:
                 best_loss = epoch_loss
-                print(f"Epoch[{n_epoch}]: Saving best model with loss {best_loss}")
                 self.save_to_checkpoint(n_epoch)
             
     def train_step(self, batch):
@@ -212,7 +212,8 @@ class Trainer:
         
         outputs = predict_batch(
             model, conditioner, n_viz_samples,
-            labels=labels, frequency_response=self.params.frequency_response
+            labels=labels, frequency_response=self.params.frequency_response,
+            scaler=dataset.scaler
         )[0]
 
         for i in range(n_viz_samples):
@@ -264,13 +265,7 @@ def _nested_map(struct, map_fn):
 def train(args, params):
     dataset = from_path(params)
 
-    if params.model == "unet1d":
-        model = Unet1D(params)
-    elif params.model == "diffwave":
-        model = DiffWave(params)
-    else:
-        raise ValueError(f"Unknown model: {params.model}. Please choose between 'unet1d' and 'diffwave'")
-
+    model = load_model(params)
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -293,7 +288,7 @@ def train_distributed(replica_id, replica_count, port, args, params):
     dataset = from_path(params, is_distributed=True)
     device = torch.device("cuda", replica_id)
     torch.cuda.set_device(device)
-    model = DiffWave(params).to(device)
+    model = load_model(params).to(device)
     noise_scheduler = model.noise_scheduler
     model = DistributedDataParallel(model, device_ids=[replica_id], find_unused_parameters=False)
     model.params = params
@@ -318,7 +313,8 @@ class Loss(nn.Module):
 
         self.loss_weight = loss_weight
 
-        self.loss_fn = nn.L1Loss(reduction="none")
+        self.loss_fn = nn.MSELoss(reduction="none")
+        #self.loss_fn = nn.L1Loss(reduction="none")
 
     def forward(self, noise, predicted):
         batch_size = noise.shape[0]

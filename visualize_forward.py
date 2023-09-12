@@ -91,19 +91,21 @@ def plot_diffusion(steps: np.array, target, labels, priors: NoiseScheduler = Non
 
 def generate_random_rir():
     if params.dataset_name == "fast_rir":
+        scaler_path = params.fast_rir_scaler_path
         rir_dataset = FastRirDataset(
             params.fast_rir_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
-            scaler_path=params.fast_rir_scaler_path,
+            scaler_path=scaler_path,
             frequency_response=params.frequency_response,
         )
     else:
+        scaler_path = params.roomfuser_scaler_path
         rir_dataset = RirDataset(
             params.roomfuser_dataset_path,
             n_rir=params.rir_len,
             trim_direct_path=params.trim_direct_path,
-            scaler_path=params.roomfuser_scaler_path,
+            scaler_path=scaler_path,
             frequency_response=params.frequency_response,
         )
     
@@ -111,7 +113,7 @@ def generate_random_rir():
     os.makedirs(animations_dir, exist_ok=True)
 
     simulator = RirSimulator(params.sample_rate, params.rir_backend, params.n_rir_order_reflection,
-                             params.trim_direct_path, n_rir=params.rir_len)
+                             params.trim_direct_path, n_rir=params.rir_len, scaler_path=scaler_path)
 
     noise_schedule = params.training_noise_schedule
     inference_noise_schedule = params.inference_noise_schedule if params.fast_sampling else None

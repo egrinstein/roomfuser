@@ -10,6 +10,9 @@ submit:
 viz:
 	@python visualize_backward.py
 
+viz3:
+	@python3 visualize_backward.py
+
 viz-fwd:
 	@python visualize_forward.py
 

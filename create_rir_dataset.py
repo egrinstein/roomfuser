@@ -14,8 +14,8 @@ if __name__ == "__main__":
         params["n_samples_per_epoch"],
         sr=params["sample_rate"],
         n_order_reflections=params["n_rir_order_reflection"],
-        room_dims_range=ROOM_DIMS,
-        mic_pos=MIC_POS,
-        source_pos=SOURCE_POS,
-        rt60_range=RT60_RANGE,
+        # room_dims_range=ROOM_DIMS,
+        # mic_pos=MIC_POS,
+        # source_pos=SOURCE_POS,
+        # rt60_range=RT60_RANGE,
     )

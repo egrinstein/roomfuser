@@ -11,11 +11,12 @@ from tqdm import trange
 
 from roomfuser.params import params
 from roomfuser.dataset import RirDataset, FastRirDataset
-from roomfuser.models.diffwave import DiffWave
+from roomfuser.models import load_model
 from roomfuser.inference import predict_batch
 
 
-def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr: int = 16000, rt60=None):
+def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr: int = 16000, rt60=None,
+                   low_ord_input: np.array = None):
     """Plot the diffusion process.
 
     Args:
@@ -48,11 +49,14 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
     if target is not None:
         mse = np.mean((target - steps[-1])**2)
-        ax.plot(target, label=f"MSE={mse} " + label, alpha=0.5)
+        ax.plot(target, label=f"MSE={mse} " + label, alpha=0.2, color="r")
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
         ax.plot(envelopes.numpy())
+
+    if low_ord_input is not None:
+        ax.plot(low_ord_input, label="Low order input", alpha=0.2, linestyle="--", color="g")
 
     if target is not None or label is not None:
         ax.legend(loc='upper right')
@@ -101,7 +105,7 @@ def generate_random_rir():
         )
     scaler = rir_dataset.scaler
 
-    model = DiffWave(params)
+    model = load_model(params)
     
     model.load_state_dict(params.model_path)
     model.device = torch.device("cpu")
@@ -110,6 +114,7 @@ def generate_random_rir():
     animations_dir = "logs/animations"
     os.makedirs(animations_dir, exist_ok=True)
 
+    noise_prior = model.noise_scheduler.noise_prior
     for i in trange(params.n_viz_samples):
         # i = np.random.randint(len(rir_dataset))
         d = rir_dataset[i]
@@ -117,6 +122,7 @@ def generate_random_rir():
         conditioner = d["conditioner"]
         target_labels = d["labels"]
         
+        prior_mean = noise_prior.get_mean([target_labels], target_audio.unsqueeze(0))[0]
         # Generate audio
         audio, sr = predict_batch(model, conditioner=conditioner.unsqueeze(0),
                               batch_size=1, return_steps=True, labels=[target_labels],
@@ -133,7 +139,8 @@ def generate_random_rir():
         # Plot diffusion process
 
         anim = plot_diffusion(audio, target_audio,
-                              rt60=target_labels["rt60"])
+                              rt60=target_labels["rt60"],
+                              low_ord_input=prior_mean)
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 
         # Save audio

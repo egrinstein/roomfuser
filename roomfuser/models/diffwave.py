@@ -213,11 +213,3 @@ class DiffWave(BaseModel):
         x = F.relu(x)
         x = self.output_projection(x)
         return x
-
-    def load_state_dict(self, path, strict=True):
-        if isinstance(path, str):
-            model_params = torch.load(path, map_location="cpu")["model"]
-        else:
-            model_params = path
-        super().load_state_dict(model_params, strict=strict)
-        

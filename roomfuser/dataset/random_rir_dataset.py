@@ -26,6 +26,7 @@ class RandomRirDataset(torch.utils.data.Dataset):
         n_order_reflections = None,
         mic_pos=None,
         source_pos=None,
+        scaler_path=""
     ):
         """
         n_rir: Size of each dataset sample
@@ -50,7 +51,8 @@ class RandomRirDataset(torch.utils.data.Dataset):
         self.mic_pos = mic_pos
         self.source_pos = source_pos
 
-        self.simulator = RirSimulator(self.sr, backend=backend, n_order_reflections=self.n_order_reflections)
+        self.simulator = RirSimulator(self.sr, backend=backend, n_order_reflections=self.n_order_reflections,
+                                      scaler_path=scaler_path)
 
     def __len__(self):
         return self.n_samples_per_epoch
@@ -97,8 +99,7 @@ def get_random_room_config(
     cat=False
     ):    
     # 1. Generate random room
-
-    if isinstance(room_dims_range[0], tuple):
+    if type(room_dims_range[0]) in [tuple, list, np.ndarray]:
         room_dims = np.array([
             np.random.uniform(*room_dims_range[i])
             for i in range(len(room_dims_range))
@@ -109,16 +110,17 @@ def get_random_room_config(
 
     rt60 = np.array([np.random.uniform(*rt60_range)])
     
+    margin = 0.2 # 20cm margin
     # 2. Generate random source and mic positions
     if mic_pos is not None:
         mic_pos = np.array(mic_pos)
     else:
-        mic_pos = np.random.uniform(0, 1, 3) * room_dims
+        mic_pos = np.random.uniform(0, 1, 3) * room_dims #(room_dims - margin) + margin
     
     if source_pos is not None:
         source_pos = np.array(source_pos)
     else:
-        source_pos = np.random.uniform(0, 1, 3) * room_dims
+        source_pos = np.random.uniform(0, 1, 3) * room_dims #(room_dims - margin) + margin
 
     # 2.1. Make sure the mic is not too close to the source
     while np.linalg.norm(mic_pos - source_pos) < 0.3 * np.linalg.norm(room_dims):

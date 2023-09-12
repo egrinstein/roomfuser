@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from roomfuser.utils import format_rir
+from roomfuser.utils import format_rir, MinMaxScaler
 
 BACKEND = ""
 
@@ -24,7 +24,7 @@ if BACKEND == "":
 
 class RirSimulator:
     def __init__(self, sr=16000, backend="auto", n_order_reflections=None, trim_direct_path=False, n_rir=None,
-                 normalize=True):
+                 normalize=True, scaler_path=""):
         self.sr = sr
         self.n_order_reflections = n_order_reflections        
         self.trim_direct_path = trim_direct_path
@@ -38,6 +38,10 @@ class RirSimulator:
         
         if self.backend not in ["gpuRIR", "pyroomacoustics"]:
             raise ValueError("Unknown backend: {}".format(self.backend))
+        
+        self.scaler = None
+        if scaler_path:
+            self.scaler = MinMaxScaler(scaler_path)
 
     def __call__(self, config_dict):
         keys = list(config_dict.keys())
@@ -49,7 +53,9 @@ class RirSimulator:
         mic_pos = config_dict["mic_pos"].cpu().numpy().astype(np.double)
 
         if isinstance(config_dict["rt60"], torch.Tensor):
-            rt60 = config_dict["rt60"].cpu().numpy().astype(np.double)[0]
+            rt60 = config_dict["rt60"].cpu().numpy().astype(np.double)
+            if rt60.ndim > 0:
+                rt60 = rt60[0]
         else:
             rt60 = config_dict["rt60"]
 
@@ -68,8 +74,11 @@ class RirSimulator:
 
         rir = format_rir(rir, config_dict, self.n_rir, self.trim_direct_path)
 
-        if self.normalize:
+        if self.scaler:
+            rir = self.scaler.scale(rir)
+        elif self.normalize:
             rir = rir / torch.max(torch.abs(rir))
+
 
         return rir
 
@@ -105,8 +114,8 @@ def simulate_rir_gpurir(room_dims, rt60, source_pos, mic_pos, n_order_reflection
     rir = gpuRIR.simulateRIR(
         room_dims,
         beta,
-        source_pos[np.newaxis, :],
-        mic_pos[np.newaxis, :],
+        source_pos[np.newaxis],
+        mic_pos[np.newaxis],
         nb_img,
         Tmax,
         sr,

@@ -3,8 +3,8 @@ from roomfuser.utils import get_exponential_envelope
 
 
 class NoisePrior:
-    def __init__(self, start_at_direct_path, variance_mode="exponential",
-                 mean_mode="constant", rir_simulator=None, n_rir=None, batch_size=None,
+    def __init__(self, start_at_direct_path, variance_mode=None,
+                 mean_mode=None, rir_simulator=None, n_rir=None, batch_size=None,
                  frequency_response=False):
         self.start_at_direct_path = start_at_direct_path
         self.variance_mode = variance_mode
@@ -79,7 +79,7 @@ class NoisePrior:
 
         mean = torch.zeros(batch_size, n_rir, device=labels[0]["source_pos"].device)
         
-        if self.mean_mode == "constant":
+        if self.mean_mode is None:
             return mean
         
         # Make the mean of the noise for each sample the low order RIR
@@ -95,7 +95,7 @@ class NoisePrior:
 
 def get_prior_variance(
         n_rir, source_pos, mic_pos, rt60, sr=16000, c=343.0,
-        start_at_direct_path=True, mode="exponential", min_variance=0.1, scale=5):
+        start_at_direct_path=True, mode="exponential", min_variance=0.1, scale=1):
     """Get prior for the room impulse response.
     Args:
         n_envelope (int): Number of samples in the envelope.
@@ -118,7 +118,7 @@ def get_prior_variance(
         )
     elif mode == "linear":
         envelope = torch.linspace(1, 0, n_rir)
-    elif mode == "constant":
+    elif mode is None:
         envelope = torch.ones(n_rir)
 
     if start_at_direct_path:
