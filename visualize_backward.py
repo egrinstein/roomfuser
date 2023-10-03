@@ -38,7 +38,7 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
     ax.set_ylim(-1, 1)
     ax.set_xlabel("Tap number")
     ax.set_ylabel("Value")
-    ax.set_title("Diffusion Process")
+    ax.set_title("Backward diffusion Process")
 
     line, = ax.plot([], [], lw=2)
     label = None
@@ -49,7 +49,7 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
     if target is not None:
         mse = np.mean((target - steps[-1])**2)
-        ax.plot(target, label="Target (MSE=%.0E" %mse, alpha=0.2, color="r")
+        ax.plot(target, label="Target (MSE=%.0E)" %mse, alpha=0.2, color="r")
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
@@ -70,7 +70,7 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
         y = steps[i]
         line.set_data(x, y)
         n_step = min(i, n_steps)
-        ax.set_title(f"Diffusion Process (Step {n_step})")
+        ax.set_title(f"Backward diffusion Process (Step {n_step})")
         return (line,)
 
     anim = FuncAnimation(

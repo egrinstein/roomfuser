@@ -37,7 +37,7 @@ def plot_diffusion(steps: np.array, target, labels, priors: NoiseScheduler = Non
     ax.set_ylim(-1, 1)
     ax.set_xlabel("Tap number")
     ax.set_ylabel("Value")
-    ax.set_title("Diffusion Process")
+    ax.set_title("Forward diffusion Process")
 
     line, = ax.plot([], [], lw=2)
 
@@ -73,7 +73,7 @@ def plot_diffusion(steps: np.array, target, labels, priors: NoiseScheduler = Non
         y = steps[i]
         line.set_data(x, y)
         n_step = min(i, n_steps)
-        ax.set_title(f"Diffusion Process (Step {n_step})")
+        ax.set_title(f"Forward diffusion Process (Step {n_step})")
         return (line,)
 
     anim = FuncAnimation(

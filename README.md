@@ -1,6 +1,12 @@
-# RoomFuser
+# RoomFuser: Room Impulse Response Generation using Neural Diffusion Models
 
-![Example diffusion](diffusion_example.gif "Example diffusion")
+![Example backward diffusion](diffusion_backward_example.gif "Example backward diffusion")
+![Example forward diffusion](diffusion_forward_example.gif "Example forward diffusion")
+
+The animations above respectively show examples of the backward (generation) and forward (learning) diffusion processes.
+## Authors
+
+Eric Grinstein and Zehua Chen, Imperial College London
 
 ## Introduction
 
@@ -33,11 +39,30 @@ The conditioning is applied in a similar way as in the original DiffWave paper, 
 In the UNet1D model, the conditioning is done by introducing a mean prior on the initial noise signal which is added during the forward process. The mean of the added noise is set as the value of a low-order RIR computed using the ISM. Computing the ISM on a low order is quite cheap, giving rise to a hybrid RIR generator.
 
 ### Feature extractors
-
+We explored three input
 * Time Domain
-* Time Domain (Scaled)
+* Time Domain (Scaled using Scikit-learn)
 * Frequency domain (i.e. Transfer Function)
+
+## Datasets
+We tested two datasets, the original one proposed by FAST-RIR, and a custom one, generated using the [GPU-RIR](https://github.com/DavidDiazGuerra/gpuRIR) library, a fast implementation of the ISM on a GPU. The custom implementation uses more   
 
 ## Usage
 
-TODO
+You can test the code on [Kaggle](https://www.kaggle.com/code/egrinstein/roomfuser), where you can also download the datasets. Note you'll need a verified phone number to be able to use a GPU.
+You can alternatively clone this repository and run it locally. You can create a conda virtual environment by running `conda env create -f environment.yml`.
+You should then activate it using `conda activate roomfuser`.
+
+There are three main scripts:
+* `python visualize_backward.py`, which generates RIRs from the conditioning.
+* `python visualize_forward.py`, which transforms RIRs into noise, i.e., the forward process.
+* `python -m roomfuser logs`, which trains the model
+
+You can also use commands in the Makefile, if you are into that sort of stuff.
+
+### Configuration
+You can play with different feature extractors, etc in the file `params.json` file
+
+## Citing
+
+If you use this in your research, please cite it. You can get a BibTeX citation by clicking "Cite this repository" on the right corner of this project's homepage. 

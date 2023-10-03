@@ -30,7 +30,7 @@
     "fast_rir_gan_dataset_path": "/home/e_grinstein/src/FAST-RIR/code_new/Generated_RIRs/",
     "fast_rir_scaler_path": "",
     "roomfuser_scaler_path": "",
-    "model_path": "",
+    "model_path": "/home/e_grinstein/src/roomfuser/logs/weights-0.pt",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

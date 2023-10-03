@@ -1,0 +1,11 @@
+cff-version: 0.0.1
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Grinstein"
+  given-names: "Eric"
+- family-names: "Chen"
+  given-names: "Zehua"
+title: "RoomFuser: Room Impulse Response Generation using Neural Diffusion Models"
+version: 0.0.1
+date-released: 2023-10-03
+url: "https://github.com/egrinstein/roomfuser"
