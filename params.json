@@ -6,12 +6,12 @@
     "n_log_epochs": 1,
     "n_viz_samples": 10,
 
-    "model": "unet1d",
+    "model": "diffwave",
     "n_samples_per_epoch": 10000,
     "fast_sampling": false,
     "rir_len": 4096,
     "trim_direct_path": true,
-    "prior_mean_mode": "low_ord_rir",
+    "prior_mean_mode": null,
     "prior_variance_mode": null,
     "n_rir_order_reflection": 10,
     "loss_weight": null,
@@ -23,14 +23,14 @@
     "n_conditioner_layers": 2,
     
     "n_conditioner": 10,
-    "dataset_name": "roomfuser",
+    "dataset_name": "fast_rir",
     "sample_rate": 16000,
     "roomfuser_dataset_path": "/home/e_grinstein/datasets/rir_dataset",
     "fast_rir_dataset_path": "/home/e_grinstein/datasets/fast_rir/Medium_Room/",
     "fast_rir_gan_dataset_path": "/home/e_grinstein/src/FAST-RIR/code_new/Generated_RIRs/",
-    "fast_rir_scaler_path": "/home/e_grinstein/datasets/fast_rir/Medium_Room/scaler_trimmed.pt",
-    "roomfuser_scaler_path": "roomfuser_scaler_trimmed.pt",
-    "model_path": "/home/e_grinstein/src/roomfuser/logs/weights-0.pt",
+    "fast_rir_scaler_path": "",
+    "roomfuser_scaler_path": "",
+    "model_path": "",
 
     "max_grad_norm": null,
     "inference_noise_schedule": [

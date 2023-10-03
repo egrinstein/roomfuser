@@ -49,7 +49,7 @@ def plot_diffusion(steps: np.array, target: np.array = None, envelopes=None, sr:
 
     if target is not None:
         mse = np.mean((target - steps[-1])**2)
-        ax.plot(target, label=f"MSE={mse} " + label, alpha=0.2, color="r")
+        ax.plot(target, label="Target (MSE=%.0E" %mse, alpha=0.2, color="r")
 
     # Plot the envelope of the RIR based on the RT60
     if envelopes is not None:
@@ -140,7 +140,7 @@ def generate_random_rir():
 
         anim = plot_diffusion(audio, target_audio,
                               rt60=target_labels["rt60"],
-                              low_ord_input=prior_mean)
+                              low_ord_input=None)#prior_mean)
         anim.save(f"{animations_dir}/diffusion_{i}.gif", writer=PillowWriter(fps=10))
 
         # Save audio
